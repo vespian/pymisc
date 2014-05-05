@@ -1,0 +1,9 @@
+---
+var1: val1
+var2: val2
+list1:
+  - abc
+  - def
+list2:
+  - abc2
+  - def2
