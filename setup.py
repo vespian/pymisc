@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+# Copyright (c) 2014 Pawel Rozlach
 # Copyright (c) 2013 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -17,12 +18,11 @@
 
 from setuptools import setup
 
-setup(name='certcheck',
-      version='0.3.0',
+setup(name='pymisc',
+      version='0.1.0',
       author='Vespian',
       author_email='vespian a t wp.pl',
       license='ASF2.0',
-      url='https://github.com/vespian/certcheck',
-      description='Certificate checking tool',
-      packages=['certcheck'],
-      scripts=['bin/certcheck'])
+      url='https://github.com/vespian/pymisc',
+      description='Some reusable code snippets',
+      packages=['pymisc']
