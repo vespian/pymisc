@@ -192,12 +192,13 @@ class ScriptStatus(object):
 
     @classmethod
     def initialize(cls,
-                    riemann_enabled=False,
-                    riemann_hosts_config=None,
-                    riemann_tags=None,
-                    riemann_service_name=None,
-                    nrpe_enabled=False,
-                    debug=False):
+                   riemann_enabled=False,
+                   riemann_hosts_config=None,
+                   riemann_tags=None,
+                   riemann_service_name=None,
+                   riemann_ttl=None,
+                   nrpe_enabled=False,
+                   debug=False):
         """
         Initialize the Status class.
 
@@ -225,55 +226,75 @@ class ScriptStatus(object):
         cls._debug = debug
         cls._status = 'ok'
         cls._message = ''
+        cls._riemann_enabled = riemann_enabled
+        cls._nrpe_enabled = nrpe_enabled
 
         # FIXME:
-        # - import riemann classes only if necessary
         # - move all riemann logic into separate class
+        # - Import riemann classes only if necessary, some of the people
+        #   will be using nrpe only.
 
-        if riemann_enabled:
-            cls._riemann_tags = riemann_tags
-        cls._hostname = socket.gethostname()
-        # FIXME - we should probably do some disconect here if we re-initialize
-        # probably using conn.shutdown() call
-        cls._riemann_connections = []
+        if cls._riemann_enabled:
 
-        if not riemann_tags:
-            logging.error('there should be at least one Riemann tag defined.')
-            return  # should it sys.exit or just return ??
-        tmp = []
-        if "static" in riemann_hosts_config:
-            for line in riemann_hosts_config["static"]:
-                tmp.extend(cls._resolve_static_entry(line))
+            if riemann_tags is None or len(riemann_tags) < 1:
+                raise TypeError('There must be at least one Riemann tag defined.')
+            else:
+                cls._riemann_tags = riemann_tags
 
-        if "by_srv" in riemann_hosts_config:
-            for line in riemann_hosts_config["by_srv"]:
-                tmp.extend(cls._resolve_srv_hosts(line))
+            if not riemann_service_name:
+                raise TypeError('Riemann service name must be defined.')
+            else:
+                cls._riemann_service_name = riemann_service_name
 
-        for riemann_host in tmp:
-            try:
-                if riemann_host.proto == 'tcp':
-                    riemann_connection = bernhard.Client(riemann_host.host,
-                                                         riemann_host.port,
-                                                         bernhard.TCPTransport)
-                elif riemann_host.proto == 'udp':
-                    riemann_connection = bernhard.Client(riemann_host.host,
-                                                         riemann_host.port,
-                                                         bernhard.UDPTransport)
-                else:
-                    logging.error("Unsupported transport {0}".format(riemann_host.proto) +
-                                  ", not connected to {1}".format(riemann_host))
-            except Exception as e:
-                logging.exception("Failed to connect to Rieman host " +
-                                  "{0}: {1}, ".format(riemann_host, str(e)) +
-                                  "address has been exluded from the list.")
-                continue
+            if not riemann_ttl or riemann_ttl < 1:
+                raise TypeError('Riemann event TTL must be defined and >1.')
+            else:
+                cls._riemann_ttl = riemann_ttl
 
-            logging.debug("Connected to Riemann instance {0}".format(riemann_host))
-            cls._riemann_connections.append(riemann_connection)
+            if not riemann_hosts_config:
+                raise TypeError('There are no Rieman servers configured.')
 
-        if not cls._riemann_connections:
-            logging.error("There are no active connections to Riemann, " +
-                          "metrics will not be send!")
+            cls._hostname = socket.gethostname()
+
+            # FIXME - we should probably do some disconect here if we re-initialize
+            # probably using conn.shutdown() call
+            cls._riemann_connections = []
+
+            tmp = []
+            if "static" in riemann_hosts_config:
+                for line in riemann_hosts_config["static"]:
+                    tmp.extend(cls._resolve_static_entry(line))
+
+            if "by_srv" in riemann_hosts_config:
+                for line in riemann_hosts_config["by_srv"]:
+                    tmp.extend(cls._resolve_srv_hosts(line))
+
+            for riemann_host in tmp:
+                try:
+                    if riemann_host.proto == 'tcp':
+                        riemann_connection = bernhard.Client(riemann_host.host,
+                                                             riemann_host.port,
+                                                             bernhard.TCPTransport)
+                    elif riemann_host.proto == 'udp':
+                        riemann_connection = bernhard.Client(riemann_host.host,
+                                                             riemann_host.port,
+                                                             bernhard.UDPTransport)
+                    else:
+                        logging.error("Unsupported transport " +
+                                      "{0}".format(riemann_host.proto) +
+                                      ", not connected to {1}".format(riemann_host))
+                except Exception as e:
+                    logging.exception("Failed to connect to Rieman host " +
+                                      "{0}: {1}, ".format(riemann_host, str(e)) +
+                                      "address has been exluded from the list.")
+                    continue
+
+                logging.debug("Connected to Riemann instance {0}".format(riemann_host))
+                cls._riemann_connections.append(riemann_connection)
+
+            if not cls._riemann_connections:
+                logging.error("There are no active connections to Riemann, " +
+                              "metrics will not be send!")
 
     @classmethod
     def notify_immediate(cls, status, message):
@@ -303,11 +324,11 @@ class ScriptStatus(object):
                      )
         event = {
             'host': cls._hostname,
-            'service': SERVICE_NAME,
+            'service': cls._riemann_service_name,
             'state': status,
             'description': message,
             'tags': cls._riemann_tags,
-            'ttl': DATA_TTL,
+            'ttl': cls._riemann_ttl,
         }
 
         cls._send_data(event)
@@ -327,11 +348,11 @@ class ScriptStatus(object):
 
         event = {
             'host': cls._hostname,
-            'service': SERVICE_NAME,
+            'service': cls._riemann_service_name,
             'state': cls._status,
             'description': cls._message,
             'tags': cls._riemann_tags,
-            'ttl': DATA_TTL,
+            'ttl': cls._riemann_ttl,
         }
 
         cls._send_data(event)
