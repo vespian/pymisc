@@ -26,3 +26,4 @@ setup(name='pymisc',
       url='https://github.com/vespian/pymisc',
       description='Some reusable code snippets',
       packages=['pymisc']
+    )
