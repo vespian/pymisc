@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python -tt
 # -*- coding: utf-8 -*-
 # Copyright (c) 2014 Pawel Rozlach
 # Copyright (c) 2013 Spotify AB

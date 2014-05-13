@@ -16,7 +16,7 @@
 # the License.
 
 
-# Make it a bit more like python3:
+# Make it a bit more like python3(in case we are running python2):
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import nested_scopes
