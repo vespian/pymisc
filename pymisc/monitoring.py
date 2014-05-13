@@ -31,10 +31,6 @@ import logging
 import re
 import socket
 
-# Defaults:
-DEFAULT_DATA_TTL = 25*60*60  # Data gathered by the script run should be valid
-                             # for 25 hours.
-
 
 class ScriptStatus(object):
 
@@ -195,21 +191,24 @@ class ScriptStatus(object):
         return [entry]
 
     @classmethod
-    def initialize(cls, use_riemann=False, riemann_hosts_config={},
-                   riemann_tags=[], use_nrpe=False, debug=False):
+    def initialize(cls,
+                    riemann_enabled=False,
+                    riemann_hosts_config=None,
+                    riemann_tags=None,
+                    riemann_service_name=None,
+                    nrpe_enabled=False,
+                    debug=False):
         """
         Initialize the Status class.
 
-        Few things are done in this class:
+        Few things are done in this method:
           * decide whether we data has to be sent to Riemann, passed to NRPE,
             or both.
           * if riemann is to be used - establish all the connections needed
 
         Args:
-          use_riemann: if set to True, all the Riemann event sending logic is
-                       enabled.
-          use_nrpe: if set to True, script will output information in NRPE
-                    friendly format as well.
+          riemann_enabled: if set to True, all the Riemann event sending logic is
+                   enabled.
           riemann_hosts_config: list of Riemann servers where events should be
                                 sent. Its format is:
                                 {
@@ -217,17 +216,23 @@ class ScriptStatus(object):
                                     "by_srv": ["srv_record_1", ...]
                                 }
           riemann_tags: list of tags that events should be marked with
+          riemann_service_name: service name to pass in event
+          riemann_ttl: TTL to ser for events
+          nrpe_enabled: if set to True, script will output information in NRPE
+                    friendly format as well.
         """
+
+        cls._debug = debug
+        cls._status = 'ok'
+        cls._message = ''
 
         # FIXME:
         # - import riemann classes only if necessary
         # - move all riemann logic into separate class
 
-        cls._riemann_tags = riemann_tags
+        if riemann_enabled:
+            cls._riemann_tags = riemann_tags
         cls._hostname = socket.gethostname()
-        cls._debug = debug
-        cls._status = 'ok'
-        cls._message = ''
         # FIXME - we should probably do some disconect here if we re-initialize
         # probably using conn.shutdown() call
         cls._riemann_connections = []
