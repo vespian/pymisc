@@ -62,7 +62,7 @@ class ScriptConfiguration(object):
             logging.error("Failed to open config file {0}: {1}".format(
                 file_path, e))
             sys.exit(1)
-        except (yaml.parser.ParserError, ValueError) as e:
+        except (ValueError, yaml.YAMLError) as e:
             logging.error("File {0} is not a proper yaml document: {1}".format(
                 file_path, e))
             sys.exit(1)
