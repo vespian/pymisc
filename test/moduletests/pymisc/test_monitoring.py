@@ -48,17 +48,43 @@ class TestPymiscMonitoring(unittest.TestCase):
     @mock.patch('pymisc.monitoring.bernhard')
     def test_script_status(self, RiemannMock, LoggingErrorMock,
                            LoggingInfoMock, *unused):
+
         # There should be at least one tag defined:
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={},
-                                                  riemann_tags=[])
-        self.assertTrue(LoggingErrorMock.called)
-        LoggingErrorMock.reset_mock()
+        with self.assertRaises(TypeError):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={
+                                                          'static': ['192.168.122.16:5555:udp']},
+                                                      riemann_tags=[],
+                                                      riemann_service_name="Test",
+                                                      riemann_ttl=360
+                                                      )
 
         # There should be at least one Riemann host defined:
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={},
-                                                  riemann_tags=['tag1', 'tag2'])
-        self.assertTrue(LoggingErrorMock.called)
-        LoggingErrorMock.reset_mock()
+        with self.assertRaises(TypeError):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_service_name="Test",
+                                                      riemann_ttl=360
+                                                      )
+
+        # TTL should be >1
+        with self.assertRaises(TypeError):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={
+                                                          'static': ['192.168.122.16:5555:udp']},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_service_name="Test"
+                                                      )
+
+        # Service name must be defined:
+        with self.assertRaises(TypeError):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={
+                                                          'static': ['192.168.122.16:5555:udp']},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_ttl=360
+                                                      )
 
         # Riemann exceptions should be properly handled/reported:
         def side_effect(host, port):
@@ -70,7 +96,11 @@ class TestPymiscMonitoring(unittest.TestCase):
 
         pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['192.168.122.16:5555:udp']},
-            riemann_tags=['tag1', 'tag2'])
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True
+            )
         self.assertTrue(LoggingErrorMock.called)
         LoggingErrorMock.reset_mock()
 
@@ -92,7 +122,11 @@ class TestPymiscMonitoring(unittest.TestCase):
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
             },
-            riemann_tags=['tag1', 'tag2'])
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True
+            )
 
         proper_calls = [mock.call('1.2.3.4', 1, 'UDPTransport'),
                         mock.call('2.3.4.5', 5555, 'TCPTransport')]
@@ -106,11 +140,11 @@ class TestPymiscMonitoring(unittest.TestCase):
         LoggingErrorMock.reset_mock()
 
         proper_call = mock.call().send({'description': 'a warning message',
-                                        'service': 'pymisc.monitoring',
+                                        'service': 'Test',
                                         'tags': ['tag1', 'tag2'],
                                         'state': 'warn',
                                         'host': platform.uname()[1],
-                                        'ttl': 90000}
+                                        'ttl': 360}
                                        )
         # This call should be issued to *both* connection mocks, but we
         # simplify things here a bit:
@@ -131,11 +165,11 @@ class TestPymiscMonitoring(unittest.TestCase):
                                         'this is a warning message.\n' +
                                         'this is a not-rated message.\n' +
                                         'this is an informational message.',
-                                        'service': 'pymisc.monitoring',
+                                        'service': 'Test',
                                         'tags': ['tag1', 'tag2'],
                                         'state': 'unknown',
                                         'host': platform.uname()[1],
-                                        'ttl': 90000}
+                                        'ttl': 360}
                                        )
         # This call should be issued to *both* connection mocks, but we
         # simplify things here a bit:
