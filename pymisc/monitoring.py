@@ -340,7 +340,7 @@ class ScriptStatus(object):
         """
 
         if cls._status == 'ok' and cls._message == '':
-            cls._message = 'All certificates are OK'
+            cls._message = 'All OK.'
 
         logging.debug("notify_agregated, " +
                       "status=<{0}>, message=<{1}>".format(

@@ -37,7 +37,7 @@ Currenlty the unittest python library is used to perform all the testing. In
 test/ directory you can find:
 - modules/ - modules used by unittests
 - moduletests/ - the unittests themselves
-- fabric/ - sample input files and test certificates temporary directories
+- fabric/ - sample input files
 - output_coverage_html/ - coverage tests results in a form of an html webpage
 
 Unittests can be started either by using *nosetest* command:
