@@ -24,6 +24,9 @@ from __future__ import print_function
 from __future__ import with_statement
 
 # Global imports:
+import bernhard
+import dns.resolver
+import mock
 import os
 import platform
 import sys
@@ -32,8 +35,6 @@ if major == 2 and minor < 7:
     import unittest2 as unittest
 else:
     import unittest
-import mock
-import bernhard
 
 # To perform local imports first we need to fix PYTHONPATH:
 pwd = os.path.abspath(os.path.dirname(__file__))
@@ -41,6 +42,7 @@ sys.path.append(os.path.abspath(pwd + '/../../modules/'))
 
 # Local imports:
 from pymisc.monitoring import FatalException
+from pymisc.monitoring import RecoverableException
 import pymisc.monitoring
 
 
@@ -99,6 +101,37 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       riemann_ttl=360
                                                       )
 
+        # Connection string should be sane
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={
+                                                          'static': ['This is not correct']},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_service_name="Test",
+                                                      riemann_ttl=360
+                                                      )
+
+        # If you are using Riemann, there should be at least one reachable
+        # server
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_service_name="Test",
+                                                      riemann_ttl=360
+                                                      )
+
+        # SRV records should be sane:
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+                'by_srv': ['_riemann._bleeh']
+                },
+                riemann_tags=['tag1', 'tag2'],
+                riemann_service_name="Test",
+                riemann_ttl=360,
+                riemann_enabled=True
+                )
+
         # Initialize the class properly:
         pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['192.168.122.16:5555:udp']},
@@ -130,24 +163,26 @@ class TestPymiscMonitoring(unittest.TestCase):
         # Riemann exceptions should be properly handled/reported:
         def dump_exception(host, port, transport):
             raise bernhard.TransportError("Raising test exception for " +
-                                          "{0}:{1} pair".format(host,port))
+                                          "{0}:{1} pair".format(host, port))
 
         RiemannMock.side_effect = dump_exception
 
         # Test exception handling during initialization:
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
-            'static': ['192.168.122.16:5555:udp']},
-            riemann_tags=['tag1', 'tag2'],
-            riemann_service_name="Test",
-            riemann_ttl=360,
-            riemann_enabled=True
-            )
+        with self.assertRaises(FatalException):  # because there will be no servers left
+            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+                'static': ['192.168.122.16:5555:udp']},
+                riemann_tags=['tag1', 'tag2'],
+                riemann_service_name="Test",
+                riemann_ttl=360,
+                riemann_enabled=True
+                )
         self.assertTrue(LoggingErrorMock.called)
         LoggingErrorMock.reset_mock()
         RiemannMock.reset_mock()
         RiemannMock.side_effect = None
 
         child_mocks = []
+
         def dump_exception(event):
             raise Exception("Raising test exception for event {0}".format(event))
 
@@ -173,13 +208,12 @@ class TestPymiscMonitoring(unittest.TestCase):
         self.assertTrue(LoggingErrorMock.called)
         LoggingErrorMock.reset_mock()
 
-
     @mock.patch('logging.warn')  # Unused, but masks error messages
     @mock.patch('logging.info')
     @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard')
     def test_debug_run(self, RiemannMock, LoggingErrorMock,
-                                 LoggingInfoMock, *unused):
+                       LoggingInfoMock, *unused):
 
         pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
@@ -212,7 +246,6 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                         "a warning message")
 
         self.assertTrue(RiemannMock.Client().send.called)
-
 
     @mock.patch('logging.warn')  # Unused, but masks error messages
     @mock.patch('logging.info')
@@ -284,6 +317,106 @@ class TestPymiscMonitoring(unittest.TestCase):
         self.assertEqual(2, len([x for x in RiemannMock.Client.mock_calls
                                  if x == proper_call]))
         RiemannMock.reset_mock()
+
+    @mock.patch('logging.warn')  # Unused, but masks error messages
+    @mock.patch('logging.info')
+    @mock.patch('logging.error')
+    @mock.patch('dns.resolver.query')
+    @mock.patch('pymisc.monitoring.bernhard')
+    def test_srv_resolution(self, RiemannMock, DNSResolverMock, *unused):
+
+        RiemannMock.UDPTransport = 'UDPTransport'
+        RiemannMock.TCPTransport = 'TCPTransport'
+
+        def dns_data(name, record_type):
+            RecordMockUDP = mock.Mock()
+            RecordMockUDP.target.to_text.side_effect = lambda : "rieman01.example.com"
+            RecordMockUDP.port = 10000
+
+            RecordMockTCP = mock.Mock()
+            RecordMockTCP.target.to_text.side_effect = lambda : "rieman02.example.com"
+            RecordMockTCP.port = 20000
+
+            RecordMockR1 = mock.Mock()
+            RecordMockR1.to_text.side_effect = lambda : "1.2.3.4"
+
+            RecordMockR2 = mock.Mock()
+            RecordMockR2.to_text.side_effect = lambda : "2.4.6.8"
+
+            data_hash = { "SRV": { "_riemann._tcp": [RecordMockTCP,],
+                                   "_riemann._udp": [RecordMockUDP,],},
+                          "A": { "rieman01.example.com": [RecordMockR1,],
+                                 "rieman02.example.com": [RecordMockR2,],},
+                        }
+            return data_hash[record_type][name]
+
+        DNSResolverMock.side_effect = dns_data
+
+        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            'by_srv': ['_riemann._tcp',
+                       '_riemann._udp']
+            },
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True
+            )
+
+        proper_calls = [mock.call('1.2.3.4', 10000, 'UDPTransport'),
+                        mock.call('2.4.6.8', 20000, 'TCPTransport')]
+        self.assertEqual(len(RiemannMock.Client.call_args_list),
+                         len(proper_calls))
+        self.assertEqual(sorted(RiemannMock.Client.call_args_list),
+                         sorted(proper_calls))
+
+    @mock.patch('logging.warn')  # Unused, but masks error messages
+    @mock.patch('logging.info')
+    @mock.patch('logging.error')
+    @mock.patch('dns.resolver.query')
+    @mock.patch('pymisc.monitoring.bernhard')
+    def test_dns_failure(self, RiemannMock, DNSResolverMock, LoggingErrorMock,
+                            LoggingInfoMock, *unused):
+
+        def dns_data(name, record_type):
+            raise dns.resolver.NXDOMAIN()
+
+        DNSResolverMock.side_effect = dns_data
+
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+                'by_srv': ['_riemann._tcp']
+                },
+                riemann_tags=['tag1', 'tag2'],
+                riemann_service_name="Test",
+                riemann_ttl=360,
+                riemann_enabled=True
+                )
+
+        self.assertTrue(LoggingErrorMock.called)
+
+        def dns_data(name, record_type):
+            RecordMockTCP = mock.Mock()
+            RecordMockTCP.target.to_text.side_effect = lambda : "rieman01.example.com"
+            RecordMockTCP.port = 10000
+
+            if record_type == "SRV" and name == "_riemann._tcp":
+                return [RecordMockTCP,]
+            if record_type == "A" and name == "rieman01.example.com":
+                raise dns.resolver.NXDOMAIN()
+            return data_hash[record_type][name]
+
+        DNSResolverMock.side_effect = dns_data
+
+        with self.assertRaises(RecoverableException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+                'by_srv': ['_riemann._tcp']
+                },
+                riemann_tags=['tag1', 'tag2'],
+                riemann_service_name="Test",
+                riemann_ttl=360,
+                riemann_enabled=True
+                )
+
 
 
 if __name__ == '__main__':

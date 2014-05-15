@@ -25,6 +25,7 @@ from __future__ import with_statement
 # Imports:
 from collections import namedtuple
 from pymisc.script import FatalException
+from pymisc.script import RecoverableException
 import bernhard
 import dns.resolver
 import logging
@@ -84,6 +85,10 @@ class ScriptStatus(object):
 
         Returns:
             A string representation of the ip address.
+
+        Raises:
+            RecoverableException - DNS record was not found
+
         """
         if re.match('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', name):
             # already an IP entry:
@@ -93,8 +98,8 @@ class ScriptStatus(object):
             try:
                 ipaddr = dns.resolver.query(name, 'A')
             except dns.resolver.NXDOMAIN:
-                logging.error("A record for {0} was not found".format(name))
-                return name  # Let somebody else worry about it ;)
+                raise RecoverableException("A DNS record for " +
+                                           "{0} was not found".format(name))
 
             return ipaddr[0].to_text()
 
@@ -171,6 +176,10 @@ class ScriptStatus(object):
                 <protocol> is either tcp or udp,
                 <host> is an IP address in format of a string,
                 <port> port, as an integer.
+
+        Raises:
+            FatalException - name argument is invalid
+
         """
         entry = namedtuple("RiemannHost", ['host', 'port', 'proto'])
         try:
@@ -218,6 +227,14 @@ class ScriptStatus(object):
           riemann_ttl: TTL to ser for events
           nrpe_enabled: if set to True, script will output information in NRPE
                     friendly format as well.
+
+        Raises:
+            FatalException - it is impossible to send notifications to monitoring
+                             system. Either call syntax is invalid or there is
+                             other error that prohibits normal operation. See
+                             exception message for details.
+            RecoverableException - error is not fata, call may repeated.
+
         """
 
         cls._debug = debug
@@ -289,8 +306,8 @@ class ScriptStatus(object):
                     cls._riemann_connections.append(riemann_connection)
 
             if not cls._riemann_connections:
-                logging.error("There are no active connections to Riemann, " +
-                              "metrics will not be send!")
+                raise FatalException("There are no active connections to Riemann, " +
+                                     "metrics will not be send!")
 
     @classmethod
     def notify_immediate(cls, status, message):
