@@ -34,7 +34,17 @@ class RecoverableException(Exception):
     Class used to create a separate hierarchy of recoverable exceptions.
 
     Exceptions raised using this class and classess inheriting from it are
-    expected to be non-fatal and local to given script/application.
+    expected to be *non-fatal* *and* *local* to given script/application.
+    """
+    pass
+
+
+class FatalException(Exception):
+    """
+    Class used to create a separate hierarchy of fatal exceptions.
+
+    Exceptions raised using this class and classess inheriting from it are
+    expected to be *fatal* *and* *local* to given script/application.
     """
     pass
 
