@@ -1,5 +1,6 @@
 #!/usr/bin/python -tt
 # -*- coding: utf-8 -*-
+# Copyright (c) 2014 Pawel Rozlach
 # Copyright (c) 2013 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -32,12 +33,14 @@ if major == 2 and minor < 7:
 else:
     import unittest
 import mock
+import bernhard
 
 # To perform local imports first we need to fix PYTHONPATH:
 pwd = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.abspath(pwd + '/../../modules/'))
 
 # Local imports:
+from pymisc.monitoring import FatalException
 import pymisc.monitoring
 
 
@@ -46,11 +49,11 @@ class TestPymiscMonitoring(unittest.TestCase):
     @mock.patch('logging.info')
     @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard')
-    def test_script_status(self, RiemannMock, LoggingErrorMock,
-                           LoggingInfoMock, *unused):
+    def test_syntax_checking(self, RiemannMock, LoggingErrorMock,
+                             LoggingInfoMock, *unused):
 
         # There should be at least one tag defined:
-        with self.assertRaises(TypeError):
+        with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:udp']},
@@ -60,7 +63,7 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       )
 
         # There should be at least one Riemann host defined:
-        with self.assertRaises(TypeError):
+        with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={},
                                                       riemann_tags=['tag1', 'tag2'],
@@ -69,7 +72,7 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       )
 
         # TTL should be >1
-        with self.assertRaises(TypeError):
+        with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:udp']},
@@ -78,7 +81,7 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       )
 
         # Service name must be defined:
-        with self.assertRaises(TypeError):
+        with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:udp']},
@@ -86,14 +89,52 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       riemann_ttl=360
                                                       )
 
+        # Transport should be tcp or udp:
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+                                                      riemann_hosts_config={
+                                                          'static': ['192.168.122.16:5555:buzz']},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_service_name="Test",
+                                                      riemann_ttl=360
+                                                      )
+
+        # Initialize the class properly:
+        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            'static': ['192.168.122.16:5555:udp']},
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True
+            )
+
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.notify_immediate("not a real status",
+                                                            "message")
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.notify_immediate("ok", "")
+
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.update("not a real status", "message")
+
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.update("ok", "")
+
+    @mock.patch('logging.warn')  # Unused, but masks error messages
+    @mock.patch('logging.info')
+    @mock.patch('logging.error')
+    @mock.patch('pymisc.monitoring.bernhard.Client')
+    def test_riemann_exception_handling(self, RiemannMock, LoggingErrorMock,
+                                        LoggingInfoMock, *unused):
+
         # Riemann exceptions should be properly handled/reported:
-        def side_effect(host, port):
-            raise Exception("Raising exception for {0}:{1} pair")
+        def dump_exception(host, port, transport):
+            raise bernhard.TransportError("Raising test exception for " +
+                                          "{0}:{1} pair".format(host,port))
 
-        RiemannMock.UDPTransport = 'UDPTransport'
-        RiemannMock.TCPTransport = 'TCPTransport'
-        RiemannMock.Client.side_effect = side_effect
+        RiemannMock.side_effect = dump_exception
 
+        # Test exception handling during initialization:
         pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['192.168.122.16:5555:udp']},
             riemann_tags=['tag1', 'tag2'],
@@ -103,21 +144,86 @@ class TestPymiscMonitoring(unittest.TestCase):
             )
         self.assertTrue(LoggingErrorMock.called)
         LoggingErrorMock.reset_mock()
+        RiemannMock.reset_mock()
+        RiemannMock.side_effect = None
 
-        RiemannMock.Client.side_effect = None
-        RiemannMock.Client.reset_mock()
+        child_mocks = []
+        def dump_exception(event):
+            raise Exception("Raising test exception for event {0}".format(event))
 
-        # Mock should only allow legitimate exit_statuses
-        pymisc.monitoring.ScriptStatus.notify_immediate("not a real status",
-                                                        "message")
+        def register_mocks(host, port, transport):
+            child = mock.Mock()
+            child.send.side_effect = dump_exception
+            child_mocks.append(child)
+            return(child)
+
+        RiemannMock.side_effect = register_mocks
+
+        # Test exception handling during event sending:
+        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            'static': ['192.168.122.16:5555:udp']},
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True
+            )
+
+        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+                                                        "a warning message")
         self.assertTrue(LoggingErrorMock.called)
         LoggingErrorMock.reset_mock()
 
-        pymisc.monitoring.ScriptStatus.update("not a real status", "message")
-        self.assertTrue(LoggingErrorMock.called)
-        LoggingErrorMock.reset_mock()
 
-        # Done with syntax checking, now initialize the class properly:
+    @mock.patch('logging.warn')  # Unused, but masks error messages
+    @mock.patch('logging.info')
+    @mock.patch('logging.error')
+    @mock.patch('pymisc.monitoring.bernhard')
+    def test_debug_run(self, RiemannMock, LoggingErrorMock,
+                                 LoggingInfoMock, *unused):
+
+        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            'static': ['1.2.3.4:1:udp',
+                       '2.3.4.5:5555:tcp']
+            },
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True,
+            debug=True
+            )
+
+        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+                                                        "a warning message")
+
+        self.assertFalse(RiemannMock.Client().send.called)
+
+        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            'static': ['1.2.3.4:1:udp',
+                       '2.3.4.5:5555:tcp']
+            },
+            riemann_tags=['tag1', 'tag2'],
+            riemann_service_name="Test",
+            riemann_ttl=360,
+            riemann_enabled=True,
+            debug=False
+            )
+
+        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+                                                        "a warning message")
+
+        self.assertTrue(RiemannMock.Client().send.called)
+
+
+    @mock.patch('logging.warn')  # Unused, but masks error messages
+    @mock.patch('logging.info')
+    @mock.patch('logging.error')
+    @mock.patch('pymisc.monitoring.bernhard')
+    def test_status_notification(self, RiemannMock, LoggingErrorMock,
+                                 LoggingInfoMock, *unused):
+
+        RiemannMock.UDPTransport = 'UDPTransport'
+        RiemannMock.TCPTransport = 'TCPTransport'
+
         pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
@@ -155,7 +261,7 @@ class TestPymiscMonitoring(unittest.TestCase):
         # update method shoul escalate only up:
         pymisc.monitoring.ScriptStatus.update('warn',
                                               "this is a warning message.")
-        pymisc.monitoring.ScriptStatus.update('ok', '')
+        pymisc.monitoring.ScriptStatus.update('ok', 'this is OK message.')
         pymisc.monitoring.ScriptStatus.update('unknown',
                                               "this is a not-rated message.")
         pymisc.monitoring.ScriptStatus.update('ok',
@@ -163,6 +269,7 @@ class TestPymiscMonitoring(unittest.TestCase):
 
         proper_call = mock.call().send({'description':
                                         'this is a warning message.\n' +
+                                        'this is OK message.\n' +
                                         'this is a not-rated message.\n' +
                                         'this is an informational message.',
                                         'service': 'Test',
