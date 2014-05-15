@@ -24,7 +24,7 @@ from __future__ import with_statement
 
 # Imports:
 from collections import namedtuple
-from pymisc.script import RecoverableException
+from pymisc.script import FatalException
 import bernhard
 import dns.resolver
 import logging
@@ -72,7 +72,7 @@ class ScriptStatus(object):
                     logging.info("Event sent succesfully")
             else:
                 logging.info('Debug flag set, I am performing no-op instead '
-                             'of real sent call')
+                             'of real sending of call')
 
     @classmethod
     def _name2ip(cls, name):
@@ -109,7 +109,7 @@ class ScriptStatus(object):
             name: domain name which SRV record should be resolved
 
         Raises:
-            RecoverableException - name argument is not a valid SRV record
+            FatalException - name argument is not a valid SRV record
 
         Returns:
             A list of named tuples "RiemannHost", each one  holding information
@@ -130,8 +130,8 @@ class ScriptStatus(object):
         elif name.find('._tcp') > 0:
             proto = 'tcp'
         else:
-            raise RecoverableException("Entry {0} ".format(name) +
-                                       "is not a valid SRV name")
+            raise FatalException("Entry {0} ".format(name) +
+                                 "is not a valid SRV name")
 
         try:
             resolved = dns.resolver.query(name, 'SRV')
@@ -179,13 +179,10 @@ class ScriptStatus(object):
             if entry.host is None:
                 raise ValueError()
             entry.port = int(b)  # Raises ValueError by itself
-            if c in ['tcp', 'udp']:
-                entry.proto = c
-            else:
-                raise ValueError()
+            entry.proto = c
         except ValueError:
-            logging.error("String {0} is not a valid ip:port:proto entry")
-            return []
+            raise FatalException(
+                "String {0} is not a valid ip:port:proto entry".format(name))
 
         logging.debug("String {0} resolved as {1}".format(name, str(entry)))
         return [entry]
@@ -237,22 +234,22 @@ class ScriptStatus(object):
         if cls._riemann_enabled:
 
             if riemann_tags is None or len(riemann_tags) < 1:
-                raise TypeError('There must be at least one Riemann tag defined.')
+                raise FatalException('There must be at least one Riemann tag defined.')
             else:
                 cls._riemann_tags = riemann_tags
 
             if not riemann_service_name:
-                raise TypeError('Riemann service name must be defined.')
+                raise FatalException('Riemann service name must be defined.')
             else:
                 cls._riemann_service_name = riemann_service_name
 
             if not riemann_ttl or riemann_ttl < 1:
-                raise TypeError('Riemann event TTL must be defined and >1.')
+                raise FatalException('Riemann event TTL must be defined and >1.')
             else:
                 cls._riemann_ttl = riemann_ttl
 
             if not riemann_hosts_config:
-                raise TypeError('There are no Rieman servers configured.')
+                raise FatalException('There are no Rieman servers configured.')
 
             cls._hostname = socket.gethostname()
 
@@ -280,17 +277,16 @@ class ScriptStatus(object):
                                                              riemann_host.port,
                                                              bernhard.UDPTransport)
                     else:
-                        logging.error("Unsupported transport " +
-                                      "{0}".format(riemann_host.proto) +
-                                      ", not connected to {1}".format(riemann_host))
-                except Exception as e:
-                    logging.exception("Failed to connect to Rieman host " +
-                                      "{0}: {1}, ".format(riemann_host, str(e)) +
-                                      "address has been exluded from the list.")
-                    continue
-
-                logging.debug("Connected to Riemann instance {0}".format(riemann_host))
-                cls._riemann_connections.append(riemann_connection)
+                        raise FatalException("Unsupported transport " +
+                                             "{0}".format(riemann_host.proto) +
+                                             ", not connected to {0}".format(riemann_host))
+                except bernhard.TransportError as e:
+                    logging.error("Failed to connect to Rieman host " +
+                                  "{0}: {1}, ".format(riemann_host, str(e)) +
+                                  "address has been exluded from the list.")
+                else:
+                    logging.debug("Connected to Riemann instance {0}".format(riemann_host))
+                    cls._riemann_connections.append(riemann_connection)
 
             if not cls._riemann_connections:
                 logging.error("There are no active connections to Riemann, " +
@@ -306,17 +302,15 @@ class ScriptStatus(object):
 
         Args:
           status: status to sent
-          message: justification/description of the status
+          message: justification/description of the status, at least 3 chars
         """
         if status not in cls._STATES:
-            logging.error("Trying to issue an immediate notification" +
-                          "with malformed status: " + status)
-            return
+            raise FatalException("Trying to issue an immediate notification" +
+                                 "with malformed status: " + status)
 
-        if not message:
-            logging.error("Trying to issue an immediate" +
-                          "notification without any message")
-            return
+        if not message or len(message) < 3:
+            raise FatalException("Trying to issue an immediate" +
+                                 "notification without any message")
 
         logging.warn("notify_immediate, " +
                      "status=<{0}>, ".format(status) +
@@ -338,9 +332,6 @@ class ScriptStatus(object):
         """
         Sent gathered data to the monitoring system.
         """
-
-        if cls._status == 'ok' and cls._message == '':
-            cls._message = 'All OK.'
 
         logging.debug("notify_agregated, " +
                       "status=<{0}>, message=<{1}>".format(
@@ -367,9 +358,12 @@ class ScriptStatus(object):
           message: justification/description of the status
         """
         if status not in cls._STATES:
-            logging.error("Trying to do the status update" +
-                          "with malformed status: " + status)
-            return
+            raise FatalException("Trying to do the status update" +
+                                 "with malformed status: " + status)
+
+        if not message or len(message) < 3:
+            raise FatalException("Trying to issue an update" +
+                                 "notification without any message")
 
         logging.info("updating script status, " +
                      "status=<{0}>, message=<{1}>".format(
@@ -377,7 +371,6 @@ class ScriptStatus(object):
         if cls._STATES[cls._status] < cls._STATES[status]:
             cls._status = status
         # ^ we only escalate up...
-        if message:
-            if cls._message:
-                cls._message += '\n'
-            cls._message += message
+        if cls._message:
+            cls._message += '\n'
+        cls._message += message
