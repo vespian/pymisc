@@ -30,6 +30,7 @@ import bernhard
 import dns.resolver
 import logging
 import re
+import sys
 import socket
 
 
@@ -43,6 +44,8 @@ class ScriptStatus(object):
 
     _status = 'ok'
     _message = ''
+    _message_aux = ''  # Used to filter out OK messages in case there are
+                       # CRIT/WARN ones.
     _riemann_connections = []
     _riemann_tags = None
     _hostname = ''
@@ -240,6 +243,7 @@ class ScriptStatus(object):
         cls._debug = debug
         cls._status = 'ok'
         cls._message = ''
+        cls._message_aux = ''
         cls._riemann_enabled = riemann_enabled
         cls._nrpe_enabled = nrpe_enabled
 
@@ -247,6 +251,10 @@ class ScriptStatus(object):
         # - move all riemann logic into separate class
         # - Import riemann classes only if necessary, some of the people
         #   will be using nrpe only.
+
+        if not cls._riemann_enabled and not cls._nrpe_enabled:
+            raise FatalException("At least one of Riemann or NRPE " +
+                                 "functionalitiy should be enabled.")
 
         if cls._riemann_enabled:
 
@@ -333,16 +341,21 @@ class ScriptStatus(object):
                      "status=<{0}>, ".format(status) +
                      "message=<{0}>".format(message)
                      )
-        event = {
-            'host': cls._hostname,
-            'service': cls._riemann_service_name,
-            'state': status,
-            'description': message,
-            'tags': cls._riemann_tags,
-            'ttl': cls._riemann_ttl,
-        }
+        if cls._riemann_enabled:
+            event = {
+                'host': cls._hostname,
+                'service': cls._riemann_service_name,
+                'state': status,
+                'description': message,
+                'tags': cls._riemann_tags,
+                'ttl': cls._riemann_ttl,
+            }
 
-        cls._send_data(event)
+            cls._send_data(event)
+
+        if cls._nrpe_enabled:
+            print(message)
+            sys.exit(cls._STATES[status])
 
     @classmethod
     def notify_agregated(cls):
@@ -354,16 +367,26 @@ class ScriptStatus(object):
                       "status=<{0}>, message=<{1}>".format(
                           cls._status, cls._message))
 
-        event = {
-            'host': cls._hostname,
-            'service': cls._riemann_service_name,
-            'state': cls._status,
-            'description': cls._message,
-            'tags': cls._riemann_tags,
-            'ttl': cls._riemann_ttl,
-        }
+        if cls._status == 'ok':
+            msg = cls._message_aux
+        else:
+            msg = cls._message
 
-        cls._send_data(event)
+        if cls._riemann_enabled:
+            event = {
+                'host': cls._hostname,
+                'service': cls._riemann_service_name,
+                'state': cls._status,
+                'description': msg,
+                'tags': cls._riemann_tags,
+                'ttl': cls._riemann_ttl,
+            }
+            cls._send_data(event)
+
+        if cls._nrpe_enabled:
+            print(msg)
+            sys.exit(cls._STATES[cls._status])
+
 
     @classmethod
     def update(cls, status, message):
@@ -385,9 +408,14 @@ class ScriptStatus(object):
         logging.info("updating script status, " +
                      "status=<{0}>, message=<{1}>".format(
                          status, message))
+        # We only escalate up...
         if cls._STATES[cls._status] < cls._STATES[status]:
             cls._status = status
-        # ^ we only escalate up...
-        if cls._message:
-            cls._message += '\n'
-        cls._message += message
+        if cls._STATES['ok'] < cls._STATES[status]:
+            if cls._message:
+                cls._message += ' '
+            cls._message += message
+        else:
+            if cls._message_aux:
+                cls._message_aux += ' '
+            cls._message_aux += message

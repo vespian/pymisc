@@ -121,6 +121,16 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       riemann_ttl=360
                                                       )
 
+        # Either Riemann or NRPE or both functionalities should be enabled
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=False,
+                                                      nrpe_enabled=False,
+                                                      riemann_hosts_config={},
+                                                      riemann_tags=['tag1', 'tag2'],
+                                                      riemann_service_name="Test",
+                                                      riemann_ttl=360
+                                                      )
+
         # SRV records should be sane:
         with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
@@ -251,7 +261,7 @@ class TestPymiscMonitoring(unittest.TestCase):
     @mock.patch('logging.info')
     @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard')
-    def test_status_notification(self, RiemannMock, LoggingErrorMock,
+    def test_riemann_status_notification(self, RiemannMock, LoggingErrorMock,
                                  LoggingInfoMock, *unused):
 
         RiemannMock.UDPTransport = 'UDPTransport'
@@ -301,10 +311,8 @@ class TestPymiscMonitoring(unittest.TestCase):
                                               "this is an informational message.")
 
         proper_call = mock.call().send({'description':
-                                        'this is a warning message.\n' +
-                                        'this is OK message.\n' +
-                                        'this is a not-rated message.\n' +
-                                        'this is an informational message.',
+                                        'this is a warning message. ' +
+                                        'this is a not-rated message.',
                                         'service': 'Test',
                                         'tags': ['tag1', 'tag2'],
                                         'state': 'unknown',
@@ -416,6 +424,61 @@ class TestPymiscMonitoring(unittest.TestCase):
                 riemann_ttl=360,
                 riemann_enabled=True
                 )
+
+    @mock.patch('logging.warn')
+    @mock.patch('logging.info')
+    @mock.patch('logging.error')
+    @mock.patch('__builtin__.print')
+    @mock.patch('sys.exit')
+    def test_nrpe_status_notification(self, SysExitMock, PrintMock,
+                                 LoggingErrorMock, LoggingInfoMock,
+                                 LoggingWarnMock):
+
+        pymisc.monitoring.ScriptStatus.initialize(
+            riemann_enabled=False,
+            nrpe_enabled=True
+            )
+
+        # Check if notify_immediate works
+        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+                                                        "a warning message")
+        SysExitMock.assert_called_once_with(1)
+        PrintMock.assert_called_once_with("a warning message")
+        self.assertTrue(LoggingWarnMock.called)
+        LoggingErrorMock.reset_mock()
+        PrintMock.reset_mock()
+        SysExitMock.reset_mock()
+
+        # update method should escalate only up:
+        pymisc.monitoring.ScriptStatus.update('warn',
+                                              "this is a warning message.")
+        pymisc.monitoring.ScriptStatus.update('ok', 'this is OK message.')
+        pymisc.monitoring.ScriptStatus.update('unknown',
+                                              "this is a not-rated message.")
+        pymisc.monitoring.ScriptStatus.update('ok',
+                                              "this is an informational message.")
+
+        pymisc.monitoring.ScriptStatus.notify_agregated()
+
+        SysExitMock.assert_called_once_with(3)
+        PrintMock.assert_called_once_with("this is a warning message. " +
+                                          "this is a not-rated message.")
+        PrintMock.reset_mock()
+        SysExitMock.reset_mock()
+
+        # OK messages should be shown only when everything is OK:
+        pymisc.monitoring.ScriptStatus.initialize(
+            riemann_enabled=False,
+            nrpe_enabled=True
+            )
+        pymisc.monitoring.ScriptStatus.update('ok', 'this is OK message.')
+        pymisc.monitoring.ScriptStatus.update('ok',
+                                              "this is an informational message.")
+        pymisc.monitoring.ScriptStatus.notify_agregated()
+        SysExitMock.assert_called_once_with(0)
+        PrintMock.assert_called_once_with("this is OK message. " +
+                                          "this is an informational message.")
+
 
 
 
