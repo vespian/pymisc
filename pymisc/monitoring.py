@@ -26,7 +26,10 @@ from __future__ import with_statement
 from collections import namedtuple
 from pymisc.script import FatalException
 from pymisc.script import RecoverableException
-import bernhard
+try:
+    import bernhard
+except ImportError:
+    pass
 import dns.resolver
 import logging
 import re
@@ -386,7 +389,6 @@ class ScriptStatus(object):
         if cls._nrpe_enabled:
             print(msg)
             sys.exit(cls._STATES[cls._status])
-
 
     @classmethod
     def update(cls, status, message):

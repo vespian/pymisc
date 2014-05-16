@@ -24,7 +24,13 @@ from __future__ import print_function
 from __future__ import with_statement
 
 # Global imports:
-import bernhard
+try:
+    import bernhard
+except ImportError:
+    print("\nbernhard module is not present, some of the tests will be disabled\n")
+    skip_Riemann = True
+else:
+    skip_Riemann = False
 import dns.resolver
 import mock
 import os
@@ -32,9 +38,16 @@ import platform
 import sys
 major, minor, micro, releaselevel, serial = sys.version_info
 if major == 2 and minor < 7:
+    # Not shure if it will work with <2.7, but still - somebody may find it
+    # usefull
     import unittest2 as unittest
 else:
     import unittest
+
+if major == 3:
+    builtins_path = "builtins.print"
+else:
+    builtins_path = "__builtin__.print"
 
 # To perform local imports first we need to fix PYTHONPATH:
 pwd = os.path.abspath(os.path.dirname(__file__))
@@ -46,13 +59,15 @@ from pymisc.monitoring import RecoverableException
 import pymisc.monitoring
 
 
+@mock.patch('logging.warn')
+@mock.patch('logging.info')
+@mock.patch('logging.error')
 class TestPymiscMonitoring(unittest.TestCase):
-    @mock.patch('logging.warn')  # Unused, but masks error messages
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard')
-    def test_syntax_checking(self, RiemannMock, LoggingErrorMock,
-                             LoggingInfoMock, *unused):
+    @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
+                     "bernhard module must be installed")
+    def test_riemann_syntax_checking(self, RiemannMock, LoggingErrorMock,
+                                     LoggingInfoMock, LoggingWarnMock):
 
         # There should be at least one tag defined:
         with self.assertRaises(FatalException):
@@ -121,16 +136,6 @@ class TestPymiscMonitoring(unittest.TestCase):
                                                       riemann_ttl=360
                                                       )
 
-        # Either Riemann or NRPE or both functionalities should be enabled
-        with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=False,
-                                                      nrpe_enabled=False,
-                                                      riemann_hosts_config={},
-                                                      riemann_tags=['tag1', 'tag2'],
-                                                      riemann_service_name="Test",
-                                                      riemann_ttl=360
-                                                      )
-
         # SRV records should be sane:
         with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
@@ -142,14 +147,16 @@ class TestPymiscMonitoring(unittest.TestCase):
                 riemann_enabled=True
                 )
 
+    def test_basic_syntax_checking(self, LoggingErrorMock, LoggingInfoMock,
+                                   LoggingWarnMock):
+
+        # Either Riemann or NRPE or both functionalities should be enabled
+        with self.assertRaises(FatalException):
+            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=False,
+                                                      nrpe_enabled=False)
+
         # Initialize the class properly:
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
-            'static': ['192.168.122.16:5555:udp']},
-            riemann_tags=['tag1', 'tag2'],
-            riemann_service_name="Test",
-            riemann_ttl=360,
-            riemann_enabled=True
-            )
+        pymisc.monitoring.ScriptStatus.initialize(nrpe_enabled=True)
 
         with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.notify_immediate("not a real status",
@@ -163,12 +170,11 @@ class TestPymiscMonitoring(unittest.TestCase):
         with self.assertRaises(FatalException):
             pymisc.monitoring.ScriptStatus.update("ok", "")
 
-    @mock.patch('logging.warn')  # Unused, but masks error messages
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard.Client')
+    @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
+                     "bernhard module must be installed")
     def test_riemann_exception_handling(self, RiemannMock, LoggingErrorMock,
-                                        LoggingInfoMock, *unused):
+                                        LoggingInfoMock, LoggingWarnMock):
 
         # Riemann exceptions should be properly handled/reported:
         def dump_exception(host, port, transport):
@@ -218,12 +224,11 @@ class TestPymiscMonitoring(unittest.TestCase):
         self.assertTrue(LoggingErrorMock.called)
         LoggingErrorMock.reset_mock()
 
-    @mock.patch('logging.warn')  # Unused, but masks error messages
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard')
-    def test_debug_run(self, RiemannMock, LoggingErrorMock,
-                       LoggingInfoMock, *unused):
+    @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
+                     "bernhard module must be installed")
+    def test_riemann_debug_run(self, RiemannMock, LoggingErrorMock,
+                               LoggingInfoMock, LoggingWarnMock):
 
         pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
@@ -257,12 +262,11 @@ class TestPymiscMonitoring(unittest.TestCase):
 
         self.assertTrue(RiemannMock.Client().send.called)
 
-    @mock.patch('logging.warn')  # Unused, but masks error messages
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
     @mock.patch('pymisc.monitoring.bernhard')
+    @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
+                     "bernhard module must be installed")
     def test_riemann_status_notification(self, RiemannMock, LoggingErrorMock,
-                                 LoggingInfoMock, *unused):
+                                         LoggingInfoMock, LoggingWarnMock):
 
         RiemannMock.UDPTransport = 'UDPTransport'
         RiemannMock.TCPTransport = 'TCPTransport'
@@ -326,36 +330,36 @@ class TestPymiscMonitoring(unittest.TestCase):
                                  if x == proper_call]))
         RiemannMock.reset_mock()
 
-    @mock.patch('logging.warn')  # Unused, but masks error messages
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
     @mock.patch('dns.resolver.query')
     @mock.patch('pymisc.monitoring.bernhard')
-    def test_srv_resolution(self, RiemannMock, DNSResolverMock, *unused):
+    @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
+                     "bernhard module must be installed")
+    def test_srv_resolution(self, RiemannMock, DNSResolverMock, LoggingErrorMock,
+                            LoggingInfoMock, LoggingWarnMock):
 
         RiemannMock.UDPTransport = 'UDPTransport'
         RiemannMock.TCPTransport = 'TCPTransport'
 
         def dns_data(name, record_type):
             RecordMockUDP = mock.Mock()
-            RecordMockUDP.target.to_text.side_effect = lambda : "rieman01.example.com"
+            RecordMockUDP.target.to_text.side_effect = lambda: "rieman01.example.com"
             RecordMockUDP.port = 10000
 
             RecordMockTCP = mock.Mock()
-            RecordMockTCP.target.to_text.side_effect = lambda : "rieman02.example.com"
+            RecordMockTCP.target.to_text.side_effect = lambda: "rieman02.example.com"
             RecordMockTCP.port = 20000
 
             RecordMockR1 = mock.Mock()
-            RecordMockR1.to_text.side_effect = lambda : "1.2.3.4"
+            RecordMockR1.to_text.side_effect = lambda: "1.2.3.4"
 
             RecordMockR2 = mock.Mock()
-            RecordMockR2.to_text.side_effect = lambda : "2.4.6.8"
+            RecordMockR2.to_text.side_effect = lambda: "2.4.6.8"
 
-            data_hash = { "SRV": { "_riemann._tcp": [RecordMockTCP,],
-                                   "_riemann._udp": [RecordMockUDP,],},
-                          "A": { "rieman01.example.com": [RecordMockR1,],
-                                 "rieman02.example.com": [RecordMockR2,],},
-                        }
+            data_hash = {"SRV": {"_riemann._tcp": [RecordMockTCP, ],
+                                 "_riemann._udp": [RecordMockUDP, ], },
+                         "A": {"rieman01.example.com": [RecordMockR1, ],
+                               "rieman02.example.com": [RecordMockR2, ], },
+                         }
             return data_hash[record_type][name]
 
         DNSResolverMock.side_effect = dns_data
@@ -377,13 +381,12 @@ class TestPymiscMonitoring(unittest.TestCase):
         self.assertEqual(sorted(RiemannMock.Client.call_args_list),
                          sorted(proper_calls))
 
-    @mock.patch('logging.warn')  # Unused, but masks error messages
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
     @mock.patch('dns.resolver.query')
     @mock.patch('pymisc.monitoring.bernhard')
+    @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
+                     "bernhard module must be installed")
     def test_dns_failure(self, RiemannMock, DNSResolverMock, LoggingErrorMock,
-                            LoggingInfoMock, *unused):
+                         LoggingInfoMock, LoggingWarnMock):
 
         def dns_data(name, record_type):
             raise dns.resolver.NXDOMAIN()
@@ -404,14 +407,13 @@ class TestPymiscMonitoring(unittest.TestCase):
 
         def dns_data(name, record_type):
             RecordMockTCP = mock.Mock()
-            RecordMockTCP.target.to_text.side_effect = lambda : "rieman01.example.com"
+            RecordMockTCP.target.to_text.side_effect = lambda: "rieman01.example.com"
             RecordMockTCP.port = 10000
 
             if record_type == "SRV" and name == "_riemann._tcp":
-                return [RecordMockTCP,]
+                return [RecordMockTCP, ]
             if record_type == "A" and name == "rieman01.example.com":
                 raise dns.resolver.NXDOMAIN()
-            return data_hash[record_type][name]
 
         DNSResolverMock.side_effect = dns_data
 
@@ -425,14 +427,11 @@ class TestPymiscMonitoring(unittest.TestCase):
                 riemann_enabled=True
                 )
 
-    @mock.patch('logging.warn')
-    @mock.patch('logging.info')
-    @mock.patch('logging.error')
-    @mock.patch('__builtin__.print')
+    @mock.patch(builtins_path)
     @mock.patch('sys.exit')
     def test_nrpe_status_notification(self, SysExitMock, PrintMock,
-                                 LoggingErrorMock, LoggingInfoMock,
-                                 LoggingWarnMock):
+                                      LoggingErrorMock, LoggingInfoMock,
+                                      LoggingWarnMock):
 
         pymisc.monitoring.ScriptStatus.initialize(
             riemann_enabled=False,
@@ -478,8 +477,6 @@ class TestPymiscMonitoring(unittest.TestCase):
         SysExitMock.assert_called_once_with(0)
         PrintMock.assert_called_once_with("this is OK message. " +
                                           "this is an informational message.")
-
-
 
 
 if __name__ == '__main__':
