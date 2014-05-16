@@ -25,9 +25,7 @@ methods/fields are prefixed with "\_" and should not be accessed directly.
 ## Contributing
 
 All patches are welcome ! Please use Github issue tracking and/or create a pull
-request.
-
-Also, please try to adhere to Google coding standards:
+request. Also, please try to adhere to Google coding standards:
 
 http://google-styleguide.googlecode.com/svn/trunk/pyguide.html#Default_Argument_Values
 
