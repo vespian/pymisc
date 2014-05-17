@@ -2,3 +2,5 @@
 /.coverage
 /build*
 debian/files
+pymisc.egg-info/*
+dist/*
