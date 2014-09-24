@@ -1,16 +1,23 @@
 Source: pymisc
-Section: utils
+Section: python
 Priority: extra
-Maintainer: Vespian <vespian@wp.pl>
-Build-Depends: python (>= 2.7), debhelper (>= 8), python-dnspython,
-    python-coverage, python-protobuf, python-unittest2, python-yaml
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
+Maintainer: Pawel Rozlach <vespian@wp.pl>
+Homepage: https://github.com/vespian/pymisc
+Build-Depends: debhelper (>= 8), dh-python, python-all (>= 2.6.6-3~),
+    python-setuptools, python3-all, python3-setuptools, python-coverage,
+    python-mock, python3-mock, python-dnspython, python3-dnspython,
+    python3-yaml, python-yaml
 X-Python-Version: >= 2.7
+X-Python3-Version: >= 3.2
 
-Package: pymisc
-Version: 0.2.0
-Architecture: any
-Depends: ${python:Depends}, python-openssl, python-bernhard, python-argparse,
-    python-protobuf, python-yaml, python-dulwich (>= 0.8), openssh-client,
-    python-dnspython
-Description: Set of simple tools usefull for small scripts.
+Package: python-pymisc
+Architecture: all
+Depends: ${python:Depends}, ${misc:Depends}, python-argparse, python-yaml
+Suggests: python-bernhard, python-protobuf, python-dnspython
+Description: Set of simple tools usefull for small scripts (Python 2).
+
+Package: python3-pymisc
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, python3-dnspython
+Description: Set of simple tools usefull for small scripts (Python 3).
