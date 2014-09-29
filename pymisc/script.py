@@ -25,6 +25,7 @@ from __future__ import with_statement
 import fcntl
 import logging
 import os
+import signal
 import sys
 import yaml
 
@@ -132,3 +133,35 @@ class ScriptLock(object):
         cls._fh.close()
         cls._fh = None
         os.unlink(cls._file_path)
+
+
+class ScriptTimeout(object):
+    """
+    Yet another implementation of scipt's timeout using SIGALARM.
+    """
+
+    @classmethod
+    def set_timeout(cls, timeout, func, args=[], kwargs={}):
+        """
+        Sets timeout to predefined value.
+
+        On timeout, function "func" is called with passed arguments.
+
+        Args:
+            timeout: time after which function "func" should be called.
+            func: the function to call
+            args: function's positional arguments
+            kwargs: function's keyword arguments
+        """
+        def handler(signalnum, stackframe):
+            func(*args, **kwargs)
+
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(timeout)
+
+    @classmethod
+    def clear_timeout(cls):
+        """
+        Clears the timeout/prevents it occuring.
+        """
+        signal.alarm(0)

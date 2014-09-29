@@ -132,6 +132,63 @@ class TestPymiscScript(unittest.TestCase):
             # now it should succed
             pymisc.script.ScriptLock.aqquire()
 
+    def test_timeout(self, *unused):
+
+        # Workaround for Python2's lack of nonlocal keyword:
+        h = {}
+        h['called'] = False
+        h['args_ok'] = False
+
+        def test_func(arg1, arg2, kwarg1=0, kwarg2=None):
+
+            h['called'] = True
+            if arg1 == 123 and arg2 == "test_arg2" and kwarg1 == 1 and \
+                    kwarg2 == "test_kwarg2":
+                h['args_ok'] = True
+
+        # Test proper handling function invocation:
+        pymisc.script.ScriptTimeout.set_timeout(1, test_func,
+                                                args=[123, "test_arg2"],
+                                                kwargs={"kwarg1": 1,
+                                                        "kwarg2": "test_kwarg2"})
+
+        time.sleep(2)
+
+        self.assertTrue(h['called'])
+        self.assertTrue(h['args_ok'])
+        h['called'] = False
+        h['args_ok'] = False
+
+        pymisc.script.ScriptTimeout.set_timeout(1, test_func,
+                                                args=[1, "NOK"],
+                                                kwargs={"kwarg1": 2,
+                                                        "kwarg2": "test_kwarg2"})
+
+        time.sleep(2)
+
+        self.assertTrue(h['called'])
+        self.assertFalse(h['args_ok'])
+        h['called'] = False
+        h['args_ok'] = False
+
+        # Test timeouting itself:
+        pymisc.script.ScriptTimeout.set_timeout(2, test_func,
+                                                args=[123, "test_arg2"],
+                                                kwargs={"kwarg1": 1,
+                                                        "kwarg2": "test_kwarg2"})
+
+        time.sleep(1)
+
+        self.assertFalse(h['called'])
+        self.assertFalse(h['args_ok'])
+
+        pymisc.script.ScriptTimeout.clear_timeout()
+
+        time.sleep(2.2)
+
+        self.assertFalse(h['called'])
+        self.assertFalse(h['args_ok'])
+
 
 if __name__ == '__main__':
     unittest.main()
