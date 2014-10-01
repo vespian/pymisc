@@ -81,10 +81,25 @@ class ScriptConfiguration(object):
     @classmethod
     def get_val(cls, key):
         """
+        Get value for particular config entry
+
         Args:
             key: name of the parameter to fetch
         """
-        return cls._config[key]
+        if not cls._config:
+            raise RecoverableException("Configuration has not been loaded yet")
+        else:
+            return cls._config[key]
+
+    @classmethod
+    def get_config(cls):
+        """
+        Get whole configuration
+        """
+        if not cls._config:
+            raise RecoverableException("Configuration has not been loaded yet")
+        else:
+            return cls._config
 
 
 class ScriptLock(object):

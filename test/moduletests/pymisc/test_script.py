@@ -39,6 +39,7 @@ pwd = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.abspath(pwd + '/../../modules/'))
 
 # Local imports:
+from pymisc.script import RecoverableException
 import file_paths as paths
 import pymisc.script
 
@@ -60,8 +61,22 @@ class TestPymiscScript(unittest.TestCase):
         self.assertTrue(LoggingErrorMock.called)
         SysExitMock.assert_called_once_with(1)
 
+        # Test non-initialized class
+        with self.assertRaises(RecoverableException):
+            pymisc.script.ScriptConfiguration.get_val("warn_treshold")
+
+        with self.assertRaises(RecoverableException):
+            pymisc.script.ScriptConfiguration.get_config()
+
         # Load the config file
         pymisc.script.ScriptConfiguration.load_config(paths.TEST_CONFIG_FILE)
+
+        # Verify whole configuration loading:
+        tmp = pymisc.script.ScriptConfiguration.get_config()
+        self.assertEqual(tmp,{  'repo_host': 'git.foo.net',
+                                'riemann_tags': ['abc', 'def'],
+                                'warn_treshold': 30
+                                })
 
         # String:
         self.assertEqual(
