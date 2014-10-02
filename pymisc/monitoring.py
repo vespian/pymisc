@@ -366,14 +366,17 @@ class ScriptStatus(object):
         Sent gathered data to the monitoring system.
         """
 
-        logging.debug("notify_agregated, " +
-                      "status=<{0}>, message=<{1}>".format(
-                          cls._status, cls._message))
-
         if cls._status == 'ok':
-            msg = cls._message_aux
+            if not cls._message_aux:
+                msg = "All OK"
+            else:
+                msg = cls._message_aux
         else:
             msg = cls._message
+
+        logging.debug("notify_agregated, " +
+                      "status=<{0}>, message=<{1}>".format(
+                          cls._status, msg))
 
         if cls._riemann_enabled:
             event = {
