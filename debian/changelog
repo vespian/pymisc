@@ -1,3 +1,9 @@
+pymisc (1.2.0) UNRELEASED; urgency=low
+
+  * Some minor fixes
+
+ -- vespian <vespian@debian01.tr.mop.vespian.net>  Fri, 03 Oct 2014 15:19:40 +0100
+
 pymisc (1.1.0) unstable; urgency=low
 
   * Add timeout functionality to pymisc.script.
