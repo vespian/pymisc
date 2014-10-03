@@ -28,9 +28,9 @@ from pymisc.script import FatalException
 from pymisc.script import RecoverableException
 try:
     import bernhard
+    import dns.resolver
 except ImportError:
     pass
-import dns.resolver
 import logging
 import re
 import sys
