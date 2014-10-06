@@ -7,3 +7,4 @@ dist/*
 debian/python-pymisc*
 debian/python3-pymisc*
 .pybuild/
+*.swp
