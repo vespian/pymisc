@@ -49,6 +49,8 @@ class ScriptStatus(object):
     _message = ''
     _message_aux = ''  # Used to filter out OK messages in case there are
                        # CRIT/WARN ones.
+    _nrpe_enabled = False
+    _riemann_enabled = False
     _riemann_connections = []
     _riemann_tags = None
     _hostname = ''
