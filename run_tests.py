@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright (c) 2014 Pawel Rozlach
-# Copyright (c) 2013 Pawel Rozlach
+# Copyright (c) 2013 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -15,29 +13,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-
-# Make it a bit more like python3:
-from __future__ import absolute_import
-from __future__ import print_function
-
 try:
     import coverage
 except ImportError:
     pass
-import os
-import shutil
 import sys
 import unittest
-
+import os
 
 def main():
-    major, minor, micro, releaselevel, serial = sys.version_info
-
-    if major == 2 and minor < 7:
-        print("In order to run tests you need at least Python 2.7")
-        sys.exit(1)
-
-    # Cleanup old html report:
+    #Cleanup old html report:
     for root, dirs, files in os.walk('test/output_coverage_html/'):
         for f in files:
             if f == '.gitignore' or f == '.empty_dir':
@@ -46,20 +31,25 @@ def main():
         for d in dirs:
             shutil.rmtree(os.path.join(root, d))
 
-    # Perform coverage analisys:
+    #Perform coverage analisys:
     if "coverage" in sys.modules:
         cov = coverage.coverage()
         cov.start()
-    
-    # Discover the test and execute them:
+
+    #Discover the tests and execute them:
     loader = unittest.TestLoader()
     tests = loader.discover('./test/')
     testRunner = unittest.runner.TextTestRunner(descriptions=True, verbosity=1)
-    testRunner.run(tests)
-    
+    res = testRunner.run(tests)
+
     if "coverage" in sys.modules:
         cov.stop()
         cov.html_report()
+
+    if res.wasSuccessful():
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
