@@ -44,34 +44,33 @@ import file_paths as paths
 import pymisc.script
 
 
-class TestPymiscScript(unittest.TestCase):
-    @mock.patch('logging.error')
-    @mock.patch('sys.exit')
-    def test_config_file_parsing(self, SysExitMock, LoggingErrorMock):
-        # Test malformed file loading
+@mock.patch('logging.info')
+@mock.patch('logging.warn')
+@mock.patch('logging.error')
+@mock.patch('sys.exit')
+class TestConfigFileParsing(unittest.TestCase):
+    def test_malformed_config_file(self, SysExitMock, LoggingErrorMock, *unused):
         pymisc.script.ScriptConfiguration.load_config(
             paths.TEST_MALFORMED_CONFIG_FILE)
         self.assertTrue(LoggingErrorMock.called)
         SysExitMock.assert_called_once_with(1)
-        SysExitMock.reset_mock()
 
-        # Test non-existent file loading
+    def test_nonexistent_config_file(self, SysExitMock, LoggingErrorMock, *unused):
         pymisc.script.ScriptConfiguration.load_config(
             paths.TEST_NONEXISTANT_CONFIG_FILE)
         self.assertTrue(LoggingErrorMock.called)
         SysExitMock.assert_called_once_with(1)
 
-        # Test non-initialized class
+    def test_noninitialized_class(self, SysExitMock, LoggingErrorMock, *unused):
         with self.assertRaises(RecoverableException):
             pymisc.script.ScriptConfiguration.get_val("warn_treshold")
 
         with self.assertRaises(RecoverableException):
             pymisc.script.ScriptConfiguration.get_config()
 
-        # Load the config file
+    def test_proper_config_file(self, SysExitMock, LoggingErrorMock, *unused):
         pymisc.script.ScriptConfiguration.load_config(paths.TEST_CONFIG_FILE)
 
-        # Verify whole configuration loading:
         tmp = pymisc.script.ScriptConfiguration.get_config()
         self.assertEqual(tmp,{  'repo_host': 'git.foo.net',
                                 'riemann_tags': ['abc', 'def'],
@@ -94,18 +93,35 @@ class TestPymiscScript(unittest.TestCase):
         with self.assertRaises(KeyError):
             pymisc.script.ScriptConfiguration.get_val("not_a_field")
 
-    @mock.patch('logging.warn')
-    def test_file_locking(self, LoggingWarnMock, *unused):
-        pymisc.script.ScriptLock.init(paths.TEST_LOCKFILE)
-
+@mock.patch('logging.info')
+@mock.patch('logging.error')
+@mock.patch('logging.warn')
+class TestNonInitializedFileLocking(unittest.TestCase):
+    def test_nolock_release(self, *unused):
         with self.assertRaises(pymisc.script.RecoverableException):
             pymisc.script.ScriptLock.release()
 
+@mock.patch('logging.info')
+@mock.patch('logging.error')
+@mock.patch('logging.warn')
+class TestInitializedFileLocking(unittest.TestCase):
+    def setUp(self):
+        pymisc.script.ScriptLock.init(paths.TEST_LOCKFILE)
+
+    def tearDown(self):
+        try:
+            pymisc.script.ScriptLock.release()
+        except RecoverableException:
+            pass
+
+    def test_double_aqquire(self, LoggingWarnMock, *unused):
         pymisc.script.ScriptLock.aqquire()
 
         pymisc.script.ScriptLock.aqquire()
         self.assertTrue(LoggingWarnMock.called)
 
+    def test_pidfile_format(self, *unused):
+        pymisc.script.ScriptLock.aqquire()
         self.assertTrue(os.path.exists(paths.TEST_LOCKFILE))
         self.assertTrue(os.path.isfile(paths.TEST_LOCKFILE))
         self.assertFalse(os.path.islink(paths.TEST_LOCKFILE))
@@ -116,14 +132,13 @@ class TestPymiscScript(unittest.TestCase):
             pid = int(pid_str)
             self.assertEqual(pid, os.getpid())
 
-        pymisc.script.ScriptLock.release()
-
+    def test_locking(self, *unused):
         child = os.fork()
         if not child:
             # we are in the child process:
             pymisc.script.ScriptLock.aqquire()
             time.sleep(10)
-            # script should not do any cleanup - it is part of the tests :)
+            # script should not do any cleanup - it is part of the test :)
         else:
             # parent
             timer = 0
@@ -147,62 +162,61 @@ class TestPymiscScript(unittest.TestCase):
             # now it should succed
             pymisc.script.ScriptLock.aqquire()
 
-    def test_timeout(self, *unused):
+class TestTimeout(unittest.TestCase):
 
-        # Workaround for Python2's lack of nonlocal keyword:
-        h = {}
-        h['called'] = False
-        h['args_ok'] = False
+    # Workaround for Python2's lack of nonlocal keyword:
+    h = {}
 
-        def test_func(arg1, arg2, kwarg1=0, kwarg2=None):
+    def _test_func(self, arg1, arg2, kwarg1=0, kwarg2=None):
 
-            h['called'] = True
-            if arg1 == 123 and arg2 == "test_arg2" and kwarg1 == 1 and \
-                    kwarg2 == "test_kwarg2":
-                h['args_ok'] = True
+        self.h['called'] = True
+        if arg1 == 123 and arg2 == "test_arg2" and kwarg1 == 1 and \
+                kwarg2 == "test_kwarg2":
+            self.h['args_ok'] = True
 
-        # Test proper handling function invocation:
-        pymisc.script.ScriptTimeout.set_timeout(1, test_func,
+    def setUp(self):
+        self.h['called'] = False
+        self.h['args_ok'] = False
+
+    def test_handler_funciton_invocation_args_match(self):
+        pymisc.script.ScriptTimeout.set_timeout(1, self._test_func,
                                                 args=[123, "test_arg2"],
                                                 kwargs={"kwarg1": 1,
                                                         "kwarg2": "test_kwarg2"})
 
         time.sleep(2)
 
-        self.assertTrue(h['called'])
-        self.assertTrue(h['args_ok'])
-        h['called'] = False
-        h['args_ok'] = False
+        self.assertTrue(self.h['called'])
+        self.assertTrue(self.h['args_ok'])
 
-        pymisc.script.ScriptTimeout.set_timeout(1, test_func,
+    def test_handler_funciton_invocation_args_mismatch(self):
+        pymisc.script.ScriptTimeout.set_timeout(1, self._test_func,
                                                 args=[1, "NOK"],
                                                 kwargs={"kwarg1": 2,
                                                         "kwarg2": "test_kwarg2"})
 
         time.sleep(2)
 
-        self.assertTrue(h['called'])
-        self.assertFalse(h['args_ok'])
-        h['called'] = False
-        h['args_ok'] = False
+        self.assertTrue(self.h['called'])
+        self.assertFalse(self.h['args_ok'])
 
-        # Test timeouting itself:
-        pymisc.script.ScriptTimeout.set_timeout(2, test_func,
+    def test_timeout_clearing(self):
+        pymisc.script.ScriptTimeout.set_timeout(2, self._test_func,
                                                 args=[123, "test_arg2"],
                                                 kwargs={"kwarg1": 1,
                                                         "kwarg2": "test_kwarg2"})
 
         time.sleep(1)
 
-        self.assertFalse(h['called'])
-        self.assertFalse(h['args_ok'])
+        self.assertFalse(self.h['called'])
+        self.assertFalse(self.h['args_ok'])
 
         pymisc.script.ScriptTimeout.clear_timeout()
 
         time.sleep(2.2)
 
-        self.assertFalse(h['called'])
-        self.assertFalse(h['args_ok'])
+        self.assertFalse(self.h['called'])
+        self.assertFalse(self.h['args_ok'])
 
 
 if __name__ == '__main__':
