@@ -1,7 +1,7 @@
 # _pymisc_
 
-<a href='https://travis-ci.org/sebdah/git-pylint-commit-hook'><img
-src='https://secure.travis-ci.org/vespian/pymisc.png?branch=master'></a>
+[![Build
+Status](https://travis-ci.org/vespian/pymisc.svg?branch=master)](https://travis-ci.org/vespian/pymisc)
 
 _pymisc is a set of small, reusable code snippets which I could not find in
 other python modules._
