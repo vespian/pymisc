@@ -1,5 +1,2 @@
-bernhard>=0.1.0
-dnspython>=1.11.1
 mock>=1.0.1
-protobuf>=2.5.0
 pyaml>=14.05.2
