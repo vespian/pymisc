@@ -1,4 +1,10 @@
-pymisc (1.2.0) UNRELEASED; urgency=low
+pymisc (1.2.1) unstable; urgency=low
+
+  * version bump 
+
+ -- vespian <vespian@debian.localdomain>  Mon, 19 Jan 2015 14:11:53 +0100
+
+pymisc (1.2.0) unstable; urgency=low
 
   * Some minor fixes
 

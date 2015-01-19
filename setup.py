@@ -19,7 +19,7 @@
 from setuptools import setup
 
 setup(name='pymisc',
-      version='0.1.0',
+      version='1.2.1',
       author='Vespian',
       author_email='vespian a t wp.pl',
       license='ASF2.0',
