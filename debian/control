@@ -7,7 +7,7 @@ Homepage: https://github.com/vespian/pymisc
 Build-Depends: debhelper (>= 8), dh-python, python-all (>= 2.6.6-3~),
     python-setuptools, python3-all, python3-setuptools, python-coverage,
     python-mock, python3-mock, python-dnspython, python3-dnspython,
-    python3-yaml, python-yaml
+    python3-yaml, python-yaml, python-nose
 X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.2
 
