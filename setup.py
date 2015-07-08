@@ -19,7 +19,7 @@
 from setuptools import setup
 
 setup(name='pymisc',
-      version='1.2.1',
+      version='1.2.2',
       author='Vespian',
       author_email='vespian a t wp.pl',
       license='ASF2.0',
@@ -27,6 +27,6 @@ setup(name='pymisc',
       description='Some reusable code snippets',
       packages=['pymisc'],
       keywords=['locking', 'logging', 'utils'],
-      download_url='https://github.com/vespian/pymisc/tarball/1.2.1',
+      download_url='https://github.com/vespian/pymisc/tarball/1.2.2',
       classifiers=[],
       )
