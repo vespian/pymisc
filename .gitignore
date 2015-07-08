@@ -2,9 +2,9 @@
 /.coverage
 /build*
 debian/files
-pymisc.egg-info/*
+pyother.egg-info/*
 dist/*
-debian/python-pymisc*
-debian/python3-pymisc*
+debian/python-pyother*
+debian/python3-pyother*
 .pybuild/
 *.swp

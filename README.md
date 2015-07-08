@@ -1,14 +1,14 @@
-# _pymisc_
+# _pyother_
 
 [![Build
-Status](https://travis-ci.org/vespian/pymisc.svg?branch=master)](https://travis-ci.org/vespian/pymisc)
+Status](https://travis-ci.org/vespian/pyother.svg?branch=master)](https://travis-ci.org/vespian/pyother)
 
-_pymisc is a set of small, reusable code snippets which I could not find in
+_pyother is a set of small, reusable code snippets which I could not find in
 other python modules._
 
 ## Project Setup
 
-In order to use pymisc following dependencies have to be installed:
+In order to use pyother following dependencies have to be installed:
 - yaml bindings for python (http://pyyaml.org/)
 - python 2.7 or python >=3.2
 
@@ -79,7 +79,7 @@ test/ directory you can find:
 Unittests can be started either by using *nosetest* command:
 
 ```
-pymisc/ (master✗) # nosetests
+pyother/ (master✗) # nosetests
 [20:33:02]
 ......
 ----------------------------------------------------------------------
@@ -91,7 +91,7 @@ OK
 or by issuing the *run_tests.py* command:
 
 ```
-pymisc/ (master✗) # run_tests.py
+pyother/ (master✗) # run_tests.py
 [20:33:04]
 ......
 ----------------------------------------------------------------------

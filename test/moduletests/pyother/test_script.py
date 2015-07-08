@@ -39,9 +39,9 @@ pwd = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.abspath(pwd + '/../../modules/'))
 
 # Local imports:
-from pymisc.script import RecoverableException
+from pyother.script import RecoverableException
 import file_paths as paths
-import pymisc.script
+import pyother.script
 
 
 @mock.patch('logging.info')
@@ -50,28 +50,28 @@ import pymisc.script
 @mock.patch('sys.exit')
 class TestConfigFileParsing(unittest.TestCase):
     def test_malformed_config_file(self, SysExitMock, LoggingErrorMock, *unused):
-        pymisc.script.ScriptConfiguration.load_config(
+        pyother.script.ScriptConfiguration.load_config(
             paths.TEST_MALFORMED_CONFIG_FILE)
         self.assertTrue(LoggingErrorMock.called)
         SysExitMock.assert_called_once_with(1)
 
     def test_nonexistent_config_file(self, SysExitMock, LoggingErrorMock, *unused):
-        pymisc.script.ScriptConfiguration.load_config(
+        pyother.script.ScriptConfiguration.load_config(
             paths.TEST_NONEXISTANT_CONFIG_FILE)
         self.assertTrue(LoggingErrorMock.called)
         SysExitMock.assert_called_once_with(1)
 
     def test_noninitialized_class(self, SysExitMock, LoggingErrorMock, *unused):
         with self.assertRaises(RecoverableException):
-            pymisc.script.ScriptConfiguration.get_val("warn_treshold")
+            pyother.script.ScriptConfiguration.get_val("warn_treshold")
 
         with self.assertRaises(RecoverableException):
-            pymisc.script.ScriptConfiguration.get_config()
+            pyother.script.ScriptConfiguration.get_config()
 
     def test_proper_config_file(self, SysExitMock, LoggingErrorMock, *unused):
-        pymisc.script.ScriptConfiguration.load_config(paths.TEST_CONFIG_FILE)
+        pyother.script.ScriptConfiguration.load_config(paths.TEST_CONFIG_FILE)
 
-        tmp = pymisc.script.ScriptConfiguration.get_config()
+        tmp = pyother.script.ScriptConfiguration.get_config()
         self.assertEqual(tmp,{  'repo_host': 'git.foo.net',
                                 'riemann_tags': ['abc', 'def'],
                                 'warn_treshold': 30
@@ -79,49 +79,49 @@ class TestConfigFileParsing(unittest.TestCase):
 
         # String:
         self.assertEqual(
-            pymisc.script.ScriptConfiguration.get_val("repo_host"),
+            pyother.script.ScriptConfiguration.get_val("repo_host"),
             "git.foo.net")
         # List of strings
         self.assertEqual(
-            pymisc.script.ScriptConfiguration.get_val("riemann_tags"),
+            pyother.script.ScriptConfiguration.get_val("riemann_tags"),
             ['abc', 'def'])
         # Integer:
         self.assertEqual(
-            pymisc.script.ScriptConfiguration.get_val("warn_treshold"), 30)
+            pyother.script.ScriptConfiguration.get_val("warn_treshold"), 30)
 
         # Key not in config file:
         with self.assertRaises(KeyError):
-            pymisc.script.ScriptConfiguration.get_val("not_a_field")
+            pyother.script.ScriptConfiguration.get_val("not_a_field")
 
 @mock.patch('logging.info')
 @mock.patch('logging.error')
 @mock.patch('logging.warn')
 class TestNonInitializedFileLocking(unittest.TestCase):
     def test_nolock_release(self, *unused):
-        with self.assertRaises(pymisc.script.RecoverableException):
-            pymisc.script.ScriptLock.release()
+        with self.assertRaises(pyother.script.RecoverableException):
+            pyother.script.ScriptLock.release()
 
 @mock.patch('logging.info')
 @mock.patch('logging.error')
 @mock.patch('logging.warn')
 class TestInitializedFileLocking(unittest.TestCase):
     def setUp(self):
-        pymisc.script.ScriptLock.init(paths.TEST_LOCKFILE)
+        pyother.script.ScriptLock.init(paths.TEST_LOCKFILE)
 
     def tearDown(self):
         try:
-            pymisc.script.ScriptLock.release()
+            pyother.script.ScriptLock.release()
         except RecoverableException:
             pass
 
     def test_double_aqquire(self, LoggingWarnMock, *unused):
-        pymisc.script.ScriptLock.aqquire()
+        pyother.script.ScriptLock.aqquire()
 
-        pymisc.script.ScriptLock.aqquire()
+        pyother.script.ScriptLock.aqquire()
         self.assertTrue(LoggingWarnMock.called)
 
     def test_pidfile_format(self, *unused):
-        pymisc.script.ScriptLock.aqquire()
+        pyother.script.ScriptLock.aqquire()
         self.assertTrue(os.path.exists(paths.TEST_LOCKFILE))
         self.assertTrue(os.path.isfile(paths.TEST_LOCKFILE))
         self.assertFalse(os.path.islink(paths.TEST_LOCKFILE))
@@ -136,7 +136,7 @@ class TestInitializedFileLocking(unittest.TestCase):
         child = os.fork()
         if not child:
             # we are in the child process:
-            pymisc.script.ScriptLock.aqquire()
+            pyother.script.ScriptLock.aqquire()
             time.sleep(10)
             # script should not do any cleanup - it is part of the test :)
         else:
@@ -154,13 +154,13 @@ class TestInitializedFileLocking(unittest.TestCase):
                 os.kill(child, 9)
                 assert False
 
-            with self.assertRaises(pymisc.script.RecoverableException):
-                pymisc.script.ScriptLock.aqquire()
+            with self.assertRaises(pyother.script.RecoverableException):
+                pyother.script.ScriptLock.aqquire()
 
             os.kill(child, 11)
 
             # now it should succed
-            pymisc.script.ScriptLock.aqquire()
+            pyother.script.ScriptLock.aqquire()
 
 class TestTimeout(unittest.TestCase):
 
@@ -179,7 +179,7 @@ class TestTimeout(unittest.TestCase):
         self.h['args_ok'] = False
 
     def test_handler_funciton_invocation_args_match(self):
-        pymisc.script.ScriptTimeout.set_timeout(1, self._test_func,
+        pyother.script.ScriptTimeout.set_timeout(1, self._test_func,
                                                 args=[123, "test_arg2"],
                                                 kwargs={"kwarg1": 1,
                                                         "kwarg2": "test_kwarg2"})
@@ -190,7 +190,7 @@ class TestTimeout(unittest.TestCase):
         self.assertTrue(self.h['args_ok'])
 
     def test_handler_funciton_invocation_args_mismatch(self):
-        pymisc.script.ScriptTimeout.set_timeout(1, self._test_func,
+        pyother.script.ScriptTimeout.set_timeout(1, self._test_func,
                                                 args=[1, "NOK"],
                                                 kwargs={"kwarg1": 2,
                                                         "kwarg2": "test_kwarg2"})
@@ -201,7 +201,7 @@ class TestTimeout(unittest.TestCase):
         self.assertFalse(self.h['args_ok'])
 
     def test_timeout_clearing(self):
-        pymisc.script.ScriptTimeout.set_timeout(2, self._test_func,
+        pyother.script.ScriptTimeout.set_timeout(2, self._test_func,
                                                 args=[123, "test_arg2"],
                                                 kwargs={"kwarg1": 1,
                                                         "kwarg2": "test_kwarg2"})
@@ -211,7 +211,7 @@ class TestTimeout(unittest.TestCase):
         self.assertFalse(self.h['called'])
         self.assertFalse(self.h['args_ok'])
 
-        pymisc.script.ScriptTimeout.clear_timeout()
+        pyother.script.ScriptTimeout.clear_timeout()
 
         time.sleep(2.2)
 

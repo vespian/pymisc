@@ -54,21 +54,21 @@ pwd = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.abspath(pwd + '/../../modules/'))
 
 # Local imports:
-from pymisc.monitoring import FatalException
-from pymisc.monitoring import RecoverableException
-import pymisc.monitoring
+from pyother.monitoring import FatalException
+from pyother.monitoring import RecoverableException
+import pyother.monitoring
 
 
 @mock.patch('logging.warn')
 @mock.patch('logging.info')
 @mock.patch('logging.error')
-@mock.patch('pymisc.monitoring.bernhard')
+@mock.patch('pyother.monitoring.bernhard')
 @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
                  "bernhard module must be installed")
 class TestRiemannSyntaxChecking(unittest.TestCase):
     def test_at_least_one_tag_defined(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:udp']},
                                                       riemann_tags=[],
@@ -78,7 +78,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_at_least_one_host_defined(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={},
                                                       riemann_tags=['tag1', 'tag2'],
                                                       riemann_service_name="Test",
@@ -87,7 +87,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_ttl_greater_than_one(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:udp']},
                                                       riemann_tags=['tag1', 'tag2'],
@@ -96,7 +96,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_service_is_defined(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:udp']},
                                                       riemann_tags=['tag1', 'tag2'],
@@ -105,7 +105,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_transport_is_udp_tcp(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['192.168.122.16:5555:buzz']},
                                                       riemann_tags=['tag1', 'tag2'],
@@ -115,7 +115,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_connectionstring_validation(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={
                                                           'static': ['This is not correct']},
                                                       riemann_tags=['tag1', 'tag2'],
@@ -125,7 +125,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_riemann_server_reachability(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=True,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=True,
                                                       riemann_hosts_config={},
                                                       riemann_tags=['tag1', 'tag2'],
                                                       riemann_service_name="Test",
@@ -134,7 +134,7 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 
     def test_srv_records_validity(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
                 'by_srv': ['_riemann._bleeh']
                 },
                 riemann_tags=['tag1', 'tag2'],
@@ -150,29 +150,29 @@ class TestRiemannSyntaxChecking(unittest.TestCase):
 class TestSyntaxChecking(unittest.TestCase):
     def test_enable_at_least_one_functionality(self, *unused):
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_enabled=False,
+            pyother.monitoring.ScriptStatus.initialize(riemann_enabled=False,
                                                       nrpe_enabled=False)
 
     def test_message_validation(self, *unused):
-        pymisc.monitoring.ScriptStatus.initialize(nrpe_enabled=True)
+        pyother.monitoring.ScriptStatus.initialize(nrpe_enabled=True)
 
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.notify_immediate("not a real status",
+            pyother.monitoring.ScriptStatus.notify_immediate("not a real status",
                                                             "message")
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.notify_immediate("ok", "")
+            pyother.monitoring.ScriptStatus.notify_immediate("ok", "")
 
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.update("not a real status", "message")
+            pyother.monitoring.ScriptStatus.update("not a real status", "message")
 
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.update("ok", "")
+            pyother.monitoring.ScriptStatus.update("ok", "")
 
 
 @mock.patch('logging.warn')
 @mock.patch('logging.info')
 @mock.patch('logging.error')
-@mock.patch('pymisc.monitoring.bernhard.Client')
+@mock.patch('pyother.monitoring.bernhard.Client')
 @unittest.skipIf(skip_Riemann, "In order to test Riemann functionality " +
                  "bernhard module must be installed")
 class TestRiemannExceptionHandling(unittest.TestCase):
@@ -188,7 +188,7 @@ class TestRiemannExceptionHandling(unittest.TestCase):
 
         # Test exception handling during initialization:
         with self.assertRaises(FatalException):  # because there will be no servers left
-            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
                 'static': ['192.168.122.16:5555:udp']},
                 riemann_tags=['tag1', 'tag2'],
                 riemann_service_name="Test",
@@ -212,7 +212,7 @@ class TestRiemannExceptionHandling(unittest.TestCase):
 
         RiemannMock.side_effect = register_mocks
 
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['192.168.122.16:5555:udp']},
             riemann_tags=['tag1', 'tag2'],
             riemann_service_name="Test",
@@ -220,7 +220,7 @@ class TestRiemannExceptionHandling(unittest.TestCase):
             riemann_enabled=True
             )
 
-        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+        pyother.monitoring.ScriptStatus.notify_immediate("warn",
                                                         "a warning message")
         self.assertTrue(LoggingErrorMock.called)
 
@@ -230,7 +230,7 @@ class TestRiemannExceptionHandling(unittest.TestCase):
 class TestRiemannFeatures(unittest.TestCase):
     def setUp(self):
         self.mocks = {}
-        for patched in ['pymisc.monitoring.bernhard',
+        for patched in ['pyother.monitoring.bernhard',
                         'dns.resolver.query',
                         'logging.error',
                         'logging.info',
@@ -239,12 +239,12 @@ class TestRiemannFeatures(unittest.TestCase):
             self.mocks[patched] = patcher.start()
             self.addCleanup(patcher.stop)
 
-        self.mocks["pymisc.monitoring.bernhard"].UDPTransport = 'UDPTransport'
-        self.mocks["pymisc.monitoring.bernhard"].TCPTransport = 'TCPTransport'
+        self.mocks["pyother.monitoring.bernhard"].UDPTransport = 'UDPTransport'
+        self.mocks["pyother.monitoring.bernhard"].TCPTransport = 'TCPTransport'
 
     def test_debug_run_enabled(self):
 
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
             },
@@ -255,14 +255,14 @@ class TestRiemannFeatures(unittest.TestCase):
             debug=True
             )
 
-        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+        pyother.monitoring.ScriptStatus.notify_immediate("warn",
                                                         "a warning message")
 
-        self.assertFalse(self.mocks["pymisc.monitoring.bernhard"].Client().send.called)
+        self.assertFalse(self.mocks["pyother.monitoring.bernhard"].Client().send.called)
 
     def test_debug_run_disabled(self):
 
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
             },
@@ -273,13 +273,13 @@ class TestRiemannFeatures(unittest.TestCase):
             debug=False
             )
 
-        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+        pyother.monitoring.ScriptStatus.notify_immediate("warn",
                                                         "a warning message")
 
-        self.assertTrue(self.mocks["pymisc.monitoring.bernhard"].Client().send.called)
+        self.assertTrue(self.mocks["pyother.monitoring.bernhard"].Client().send.called)
 
     def test_initialization(self):
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
             },
@@ -291,10 +291,10 @@ class TestRiemannFeatures(unittest.TestCase):
 
         proper_calls = [mock.call('1.2.3.4', 1, 'UDPTransport'),
                         mock.call('2.3.4.5', 5555, 'TCPTransport')]
-        self.mocks["pymisc.monitoring.bernhard"].Client.assert_has_calls(proper_calls)
+        self.mocks["pyother.monitoring.bernhard"].Client.assert_has_calls(proper_calls)
 
     def test_notify_immediate(self):
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
             },
@@ -304,7 +304,7 @@ class TestRiemannFeatures(unittest.TestCase):
             riemann_enabled=True
             )
 
-        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+        pyother.monitoring.ScriptStatus.notify_immediate("warn",
                                                         "a warning message")
 
         self.assertTrue(self.mocks["logging.info"].called)
@@ -319,11 +319,11 @@ class TestRiemannFeatures(unittest.TestCase):
         # This call should be issued to *both* connection mocks, but we
         # simplify things here a bit:
         self.assertEqual(2, len([x for x in
-                                 self.mocks["pymisc.monitoring.bernhard"].Client.mock_calls
+                                 self.mocks["pyother.monitoring.bernhard"].Client.mock_calls
                                  if x == proper_call]))
 
     def test_update_only_escalates_up(self):
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'static': ['1.2.3.4:1:udp',
                        '2.3.4.5:5555:tcp']
             },
@@ -333,12 +333,12 @@ class TestRiemannFeatures(unittest.TestCase):
             riemann_enabled=True
             )
 
-        pymisc.monitoring.ScriptStatus.update('warn',
+        pyother.monitoring.ScriptStatus.update('warn',
                                               "this is a warning message.")
-        pymisc.monitoring.ScriptStatus.update('ok', 'this is OK message.')
-        pymisc.monitoring.ScriptStatus.update('unknown',
+        pyother.monitoring.ScriptStatus.update('ok', 'this is OK message.')
+        pyother.monitoring.ScriptStatus.update('unknown',
                                               "this is a not-rated message.")
-        pymisc.monitoring.ScriptStatus.update('ok',
+        pyother.monitoring.ScriptStatus.update('ok',
                                               "this is an informational message.")
 
         proper_call = mock.call().send({'description':
@@ -352,9 +352,9 @@ class TestRiemannFeatures(unittest.TestCase):
                                        )
         # This call should be issued to *both* connection mocks, but we
         # simplify things here a bit:
-        pymisc.monitoring.ScriptStatus.notify_agregated()
+        pyother.monitoring.ScriptStatus.notify_agregated()
         self.assertEqual(2, len([x for x in
-                                 self.mocks["pymisc.monitoring.bernhard"].Client.mock_calls
+                                 self.mocks["pyother.monitoring.bernhard"].Client.mock_calls
                                  if x == proper_call]))
 
     def test_srv_resolution(self):
@@ -382,7 +382,7 @@ class TestRiemannFeatures(unittest.TestCase):
 
         self.mocks["dns.resolver.query"].side_effect = dns_data
 
-        pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+        pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
             'by_srv': ['_riemann._tcp',
                        '_riemann._udp']
             },
@@ -394,7 +394,7 @@ class TestRiemannFeatures(unittest.TestCase):
 
         proper_calls = [mock.call('1.2.3.4', 10000, 'UDPTransport'),
                         mock.call('2.4.6.8', 20000, 'TCPTransport')]
-        self.mocks["pymisc.monitoring.bernhard"].Client.assert_has_calls(
+        self.mocks["pyother.monitoring.bernhard"].Client.assert_has_calls(
             proper_calls, any_order=True)
 
     def test_dns_failure(self):
@@ -404,7 +404,7 @@ class TestRiemannFeatures(unittest.TestCase):
         self.mocks["dns.resolver.query"].side_effect = dns_data
 
         with self.assertRaises(FatalException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
                 'by_srv': ['_riemann._tcp']
                 },
                 riemann_tags=['tag1', 'tag2'],
@@ -429,7 +429,7 @@ class TestRiemannFeatures(unittest.TestCase):
         self.mocks["dns.resolver.query"].side_effect = dns_data
 
         with self.assertRaises(RecoverableException):
-            pymisc.monitoring.ScriptStatus.initialize(riemann_hosts_config={
+            pyother.monitoring.ScriptStatus.initialize(riemann_hosts_config={
                 'by_srv': ['_riemann._tcp']
                 },
                 riemann_tags=['tag1', 'tag2'],
@@ -446,7 +446,7 @@ class TestRiemannFeatures(unittest.TestCase):
 @mock.patch('sys.exit')
 class TestGenericFeatures(unittest.TestCase):
     def setUp(self):
-        pymisc.monitoring.ScriptStatus.initialize(
+        pyother.monitoring.ScriptStatus.initialize(
             riemann_enabled=False,
             nrpe_enabled=True
             )
@@ -454,7 +454,7 @@ class TestGenericFeatures(unittest.TestCase):
     def test_notify_immediate(self, SysExitMock, PrintMock,
                               LoggingErrorMock, LoggingInfoMock,
                               LoggingWarnMock):
-        pymisc.monitoring.ScriptStatus.notify_immediate("warn",
+        pyother.monitoring.ScriptStatus.notify_immediate("warn",
                                                         "a warning message")
         SysExitMock.assert_called_once_with(1)
         PrintMock.assert_called_once_with("a warning message")
@@ -463,15 +463,15 @@ class TestGenericFeatures(unittest.TestCase):
     def test_update_escalates_up(self, SysExitMock, PrintMock,
                                  LoggingErrorMock, LoggingInfoMock,
                                  LoggingWarnMock):
-        pymisc.monitoring.ScriptStatus.update('warn',
+        pyother.monitoring.ScriptStatus.update('warn',
                                               "this is a warning message.")
-        pymisc.monitoring.ScriptStatus.update('ok', 'this is OK message.')
-        pymisc.monitoring.ScriptStatus.update('unknown',
+        pyother.monitoring.ScriptStatus.update('ok', 'this is OK message.')
+        pyother.monitoring.ScriptStatus.update('unknown',
                                               "this is a not-rated message.")
-        pymisc.monitoring.ScriptStatus.update('ok',
+        pyother.monitoring.ScriptStatus.update('ok',
                                               "this is an informational message.")
 
-        pymisc.monitoring.ScriptStatus.notify_agregated()
+        pyother.monitoring.ScriptStatus.notify_agregated()
 
         SysExitMock.assert_called_once_with(3)
         PrintMock.assert_called_once_with("this is a warning message. " +
@@ -480,14 +480,14 @@ class TestGenericFeatures(unittest.TestCase):
     def test_default_ok_message(self, SysExitMock, PrintMock,
                                 LoggingErrorMock, LoggingInfoMock,
                                 LoggingWarnMock):
-        pymisc.monitoring.ScriptStatus.initialize(
+        pyother.monitoring.ScriptStatus.initialize(
             riemann_enabled=False,
             nrpe_enabled=True
             )
-        pymisc.monitoring.ScriptStatus.update('ok', 'this is OK message.')
-        pymisc.monitoring.ScriptStatus.update('ok',
+        pyother.monitoring.ScriptStatus.update('ok', 'this is OK message.')
+        pyother.monitoring.ScriptStatus.update('ok',
                                               "this is an informational message.")
-        pymisc.monitoring.ScriptStatus.notify_agregated()
+        pyother.monitoring.ScriptStatus.notify_agregated()
         SysExitMock.assert_called_once_with(0)
         PrintMock.assert_called_once_with("this is OK message. " +
                                           "this is an informational message.")

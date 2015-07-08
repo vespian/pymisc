@@ -24,8 +24,8 @@ from __future__ import with_statement
 
 # Imports:
 from collections import namedtuple
-from pymisc.script import FatalException
-from pymisc.script import RecoverableException
+from pyother.script import FatalException
+from pyother.script import RecoverableException
 try:
     import bernhard
     import dns.resolver

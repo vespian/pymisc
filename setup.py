@@ -18,15 +18,15 @@
 
 from setuptools import setup
 
-setup(name='pymisc',
+setup(name='pyother',
       version='1.2.2',
       author='Vespian',
       author_email='vespian a t wp.pl',
       license='ASF2.0',
-      url='https://github.com/vespian/pymisc',
+      url='https://github.com/vespian/pyother',
       description='Some reusable code snippets',
-      packages=['pymisc'],
+      packages=['pyother'],
       keywords=['locking', 'logging', 'utils'],
-      download_url='https://github.com/vespian/pymisc/tarball/1.2.2',
+      download_url='https://github.com/vespian/pyother/tarball/1.2.2',
       classifiers=[],
       )

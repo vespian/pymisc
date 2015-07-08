@@ -1,28 +1,28 @@
-pymisc (1.2.2) unstable; urgency=low
+pyother (1.2.2) unstable; urgency=low
 
   * version bump 
 
  -- vespian <vespian@debian.localdomain>  Mon, 19 Jun 2015 14:11:53 +0100
 
-pymisc (1.2.1) unstable; urgency=low
+pyother (1.2.1) unstable; urgency=low
 
   * version bump 
 
  -- vespian <vespian@debian.localdomain>  Mon, 19 Jan 2015 14:11:53 +0100
 
-pymisc (1.2.0) unstable; urgency=low
+pyother (1.2.0) unstable; urgency=low
 
   * Some minor fixes
 
  -- vespian <vespian@debian01.tr.mop.vespian.net>  Fri, 03 Oct 2014 15:19:40 +0100
 
-pymisc (1.1.0) unstable; urgency=low
+pyother (1.1.0) unstable; urgency=low
 
-  * Add timeout functionality to pymisc.script.
+  * Add timeout functionality to pyother.script.
 
  -- Pawel Rozlach <vespian@wp.pl>  Mon, 29 Sep 2014 14:33:43 +0000
 
-pymisc (1.0.0) unstable; urgency=low
+pyother (1.0.0) unstable; urgency=low
 
   * Initial release.
 

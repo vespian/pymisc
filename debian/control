@@ -1,9 +1,9 @@
-Source: pymisc
+Source: pyother
 Section: python
 Priority: extra
 Standards-Version: 3.9.4
 Maintainer: Pawel Rozlach <vespian@wp.pl>
-Homepage: https://github.com/vespian/pymisc
+Homepage: https://github.com/vespian/pyother
 Build-Depends: debhelper (>= 8), dh-python, python-all (>= 2.6.6-3~),
     python-setuptools, python3-all, python3-setuptools, python-coverage,
     python-mock, python3-mock, python-dnspython, python3-dnspython,
@@ -11,13 +11,13 @@ Build-Depends: debhelper (>= 8), dh-python, python-all (>= 2.6.6-3~),
 X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.2
 
-Package: python-pymisc
+Package: python-pyother
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, python-argparse, python-yaml
 Suggests: python-bernhard, python-protobuf, python-dnspython
 Description: Set of simple tools usefull for small scripts (Python 2).
 
-Package: python3-pymisc
+Package: python3-pyother
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, python3-dnspython
 Description: Set of simple tools usefull for small scripts (Python 3).
