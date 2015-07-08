@@ -25,5 +25,8 @@ setup(name='pymisc',
       license='ASF2.0',
       url='https://github.com/vespian/pymisc',
       description='Some reusable code snippets',
-      packages=['pymisc']
-    )
+      packages=['pymisc'],
+      keywords=['locking', 'logging', 'utils'],
+      download_url='https://github.com/vespian/pymisc/tarball/1.2.1',
+      classifiers=[],
+      )
